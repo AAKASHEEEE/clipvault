@@ -1,0 +1,28 @@
+{
+  "passed": 22,
+  "checks": [
+    "offline homepage",
+    "isolated demo data",
+    "search and reset",
+    "status menu moves clips",
+    "pointer drag and drop",
+    "manual analytics rendered",
+    "blank workspace separate from demo",
+    "unsafe links rejected",
+    "user HTML escaped",
+    "account edit",
+    "failed save leaves form open and state unchanged",
+    "posted clip validation",
+    "local persistence after reload",
+    "delete account preserves clips",
+    "JSON export",
+    "invalid import rejected",
+    "confirmed backup restore",
+    "cloud configuration errors are actionable",
+    "signup confirmation message retained (mock)",
+    "cloud load failure prevents stale data display (mock)",
+    "all routes fit 390px viewport",
+    "no uncaught browser exceptions"
+  ],
+  "errors": []
+}

@@ -1,0 +1,24 @@
+✔ URL normalization (1.920468ms)
+✔ unsafe protocols rejected (0.575545ms)
+✔ embedded credentials rejected (0.223987ms)
+✔ secrets and ownership stripped (0.377107ms)
+✔ HTML escaped (0.370588ms)
+✔ negative fractional unsafe NaN views rejected (0.485847ms)
+✔ original niches supported (0.272539ms)
+✔ invalid platform rejected (0.245955ms)
+✔ cross-account references rejected (0.315572ms)
+✔ 24h views bounded (0.339087ms)
+✔ metrics exclude unpublished and separate totals (0.309163ms)
+✔ demo validates (7.337669ms)
+✔ duplicate IDs rejected (0.544771ms)
+✔ bad backup date rejected (1.486918ms)
+✔ backup strips old secrets (0.343631ms)
+✔ length limits enforced (0.214587ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 94.274266

@@ -1,4 +1,4 @@
-# ClipVault — enhanced edition
+# ClipVault enhanced edition
 
 A local-first clipping workspace, refactored from the supplied project. No build step is required.
 

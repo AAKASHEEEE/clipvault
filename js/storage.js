@@ -7,6 +7,8 @@
       "id,created_at,name,url,platform,niche,status,priority,handle,email,phone,notes,views,subscribers,videos",
     clips:
       "id,created_at,title,account_id,source_url,status,priority,views,views_24h,geo,age_group",
+    user_profiles:
+      "id,email,display_name,avatar_url,theme,notifications_enabled,default_platform,sort_preference,bio,updated_at",
   };
   const key = "clipvault.enhanced.v1";
   class LocalStore {
@@ -60,6 +62,24 @@
         get("clips"),
       ]);
       return C.backup({ version: 1, accounts, clips });
+    }
+    async getProfile() {
+      const { data, error } = await this.client
+        .from("user_profiles")
+        .select(fields.user_profiles)
+        .eq("id", this.user.id)
+        .single();
+      if (error && error.code !== "PGRST116") throw error;
+      return data || null;
+    }
+    async saveProfile(profile) {
+      const { data, error } = await this.client
+        .from("user_profiles")
+        .upsert({ id: this.user.id, email: this.user.email, ...profile, updated_at: new Date().toISOString() })
+        .select(fields.user_profiles)
+        .single();
+      if (error) throw error;
+      return data;
     }
     async save(table, row, id) {
       const q = id

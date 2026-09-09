@@ -577,11 +577,19 @@
     S.mode = "cloud";
     S.sample = false;
     try {
-      const d = await store.load();
+      const [d, profile] = await Promise.all([
+        store.load(),
+        store.getProfile().catch(() => null),
+      ]);
       if (token !== S.epoch) return;
+      // Apply user preferences to the app
+      if (profile) {
+        applyUserPreferences(profile);
+      }
       Object.assign(S, {
         data: d,
         store,
+        profile: profile || {},
         view: "app",
         page: "overview",
         loaded: true,
@@ -595,6 +603,18 @@
       );
       throw e;
     }
+  }
+  function applyUserPreferences(profile) {
+    if (!profile) return;
+    // Apply theme preference
+    if (profile.theme === "dark") {
+      document.documentElement.style.colorScheme = "dark";
+    } else if (profile.theme === "light") {
+      document.documentElement.style.colorScheme = "light";
+    }
+    // Store preferences in app state for UI customization
+    if (profile.sort_preference) S.sort = profile.sort_preference;
+    if (profile.default_platform) S.platform = profile.default_platform;
   }
   function clearSession() {
     ++S.epoch;
@@ -713,6 +733,22 @@
           );
           return;
         }
+        // Create user profile on signup
+        if (form.dataset.mode === "signup" && response.data.session?.user) {
+          try {
+            const store = new CloudStore(S.client, response.data.session.user);
+            await store.saveProfile({
+              display_name: values.name || "",
+              theme: "auto",
+              notifications_enabled: true,
+              default_platform: "youtube",
+              sort_preference: "newest",
+              bio: "",
+            });
+          } catch (e) {
+            console.warn("Could not create user profile:", e);
+          }
+        }
         await enterCloud(response.data.session);
       }
     });
@@ -811,6 +847,23 @@
             notify("Local workspace reset.");
           },
         );
+      if (b.id === "save-profile-btn" && S.mode === "cloud" && S.store) {
+        const form = b.closest("section");
+        if (!form) return;
+        const profile = {
+          display_name: form.querySelector('input[id="display_name"]')?.value || "",
+          bio: form.querySelector('input[id="bio"]')?.value || "",
+          avatar_url: form.querySelector('input[id="avatar_url"]')?.value || "",
+          theme: form.querySelector("select#profile-theme")?.value || "auto",
+          notifications_enabled: form.querySelector("#notifications")?.checked || true,
+        };
+        await busy(b, async () => {
+          const updated = await S.store.saveProfile(profile);
+          Object.assign(S, { profile: updated });
+          applyUserPreferences(updated);
+          notify("Profile saved successfully.");
+        });
+      }
     } catch (err) {
       notify(err.message, true);
     }

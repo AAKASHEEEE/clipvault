@@ -1,6 +1,18 @@
 -- Fresh Supabase projects only. Intentionally fails if original tables exist.
 -- Review and run manually. This file has NOT been applied to a live database.
 BEGIN;
+CREATE TABLE public.user_profiles (
+ id uuid PRIMARY KEY DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
+ email text NOT NULL,
+ display_name text NOT NULL DEFAULT '',
+ avatar_url text NOT NULL DEFAULT '',
+ theme text NOT NULL DEFAULT 'auto' CHECK(theme IN ('light','dark','auto')),
+ notifications_enabled boolean NOT NULL DEFAULT true,
+ default_platform text NOT NULL DEFAULT 'youtube' CHECK(default_platform IN ('youtube','instagram','tiktok','facebook','podcast')),
+ sort_preference text NOT NULL DEFAULT 'newest' CHECK(sort_preference IN ('newest','priority','name')),
+ bio text NOT NULL DEFAULT '',
+ updated_at timestamptz NOT NULL DEFAULT now()
+);
 CREATE TABLE public.accounts (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
  user_id uuid NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -32,12 +44,17 @@ CREATE TABLE public.clips (
 CREATE INDEX accounts_owner_idx ON public.accounts(user_id);
 CREATE INDEX clips_owner_stage_idx ON public.clips(user_id,status);
 CREATE INDEX clips_account_idx ON public.clips(account_id);
+CREATE INDEX user_profiles_email_idx ON public.user_profiles(email);
 ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.clips ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public.accounts,public.clips FROM anon;
+ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.accounts,public.clips,public.user_profiles FROM anon;
 GRANT SELECT,INSERT,UPDATE,DELETE ON public.accounts,public.clips TO authenticated;
+GRANT SELECT,INSERT,UPDATE ON public.user_profiles TO authenticated;
 CREATE POLICY account_owner ON public.accounts FOR ALL TO authenticated
  USING((SELECT auth.uid())=user_id) WITH CHECK((SELECT auth.uid())=user_id);
+CREATE POLICY profile_self ON public.user_profiles FOR ALL TO authenticated
+ USING((SELECT auth.uid())=id) WITH CHECK((SELECT auth.uid())=id);
 CREATE POLICY clip_owner ON public.clips FOR ALL TO authenticated
  USING((SELECT auth.uid())=user_id)
  WITH CHECK((SELECT auth.uid())=user_id AND (account_id IS NULL OR EXISTS

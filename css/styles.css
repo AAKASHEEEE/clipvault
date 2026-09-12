@@ -1776,7 +1776,8 @@ footer {
   align-items: center;
   gap: 12px;
 }
-.yt-status-pill {
+.yt-status-pill,
+.social-status-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1788,7 +1789,8 @@ footer {
   border-radius: 999px;
   border: 1px solid rgba(16, 185, 129, 0.2);
 }
-:root[data-theme="dark"] .yt-status-pill {
+:root[data-theme="dark"] .yt-status-pill,
+:root[data-theme="dark"] .social-status-pill {
   background: rgba(16, 185, 129, 0.15);
   border-color: rgba(16, 185, 129, 0.3);
 }

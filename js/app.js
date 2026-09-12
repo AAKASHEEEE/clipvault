@@ -114,6 +114,20 @@
       } catch {
         return "";
       }
+    })(),
+    rapidApiKey = (() => {
+      try {
+        return localStorage.getItem("clipvault.rapidApiKey") || "";
+      } catch {
+        return "";
+      }
+    })(),
+    instaMetaToken = (() => {
+      try {
+        return localStorage.getItem("clipvault.instaMetaToken") || "";
+      } catch {
+        return "";
+      }
     })();
   const names = {
     overview: "Overview",
@@ -492,8 +506,10 @@
           </button>
         </div>
         <div class="analytics-actions">
-          ${ytKey ? `<span class="yt-status-pill" title="YouTube API Key configured">● YouTube Sync Ready</span>` : `<button type="button" class="text-button" data-page="settings">+ Connect YouTube API</button>`}
-          <button type="button" class="button primary tiny" data-action="sync-yt-clips">⚡ Sync YouTube Views</button>
+          ${ytKey ? `<span class="yt-status-pill" title="YouTube API Key configured">● YouTube</span>` : ""}
+          ${rapidApiKey || instaMetaToken ? `<span class="social-status-pill" title="Instagram & TikTok Sync ready">● Insta & TikTok</span>` : ""}
+          ${!ytKey && !rapidApiKey && !instaMetaToken ? `<button type="button" class="text-button" data-page="settings">+ Connect APIs</button>` : ""}
+          <button type="button" class="button primary tiny" data-action="sync-all-social">⚡ Sync Social Views</button>
         </div>
       </div>
     `;
@@ -526,7 +542,7 @@
         <div class="quick-log-head">
           <div>
             <h2>Multi-Platform Quick-Log</h2>
-            <p>Rapidly record views across YouTube, TikTok, Instagram, and Facebook. Hit "Save All Changes" when done.</p>
+            <p>Rapidly record views & likes across YouTube, TikTok, Instagram, and Facebook. Hit "Save All Changes" when done.</p>
           </div>
           <button type="submit" form="quicklog-form" class="button primary">Save All Changes</button>
         </div>
@@ -548,9 +564,10 @@
               <tbody>
                 ${clips.map((c) => {
                   const a = S.data.accounts.find((acc) => acc.id === c.account_id);
-                  const isYT = extractYouTubeVideoId(c.source_url) !== null;
+                  const platform = detectPlatformFromUrl(c.source_url) || (a ? a.platform : null);
+                  const canSync = ["youtube", "instagram", "tiktok"].includes(platform);
                   return `<tr>
-                    <td><span class="platform-text ${a?.platform || ""}">${a ? platformMark(a.platform) : ""}${E(a ? C.platforms[a.platform] : "Shorts")}</span></td>
+                    <td><span class="platform-text ${a?.platform || platform || ""}">${a ? platformMark(a.platform) : ""}${E(a ? C.platforms[a.platform] : platform === "tiktok" ? "TikTok" : platform === "instagram" ? "Reels" : "Shorts")}</span></td>
                     <td>
                       <div class="quick-log-clip-title">
                         <button type="button" class="text-button" data-edit-clip="${c.id}">${E(c.title)}</button>
@@ -570,7 +587,7 @@
                     </td>
                     <td>
                       <div class="quick-actions-cell">
-                        ${isYT ? `<button type="button" class="button tiny primary" data-sync-single-yt="${c.id}" title="Fetch latest views & likes from YouTube">⚡ Sync</button>` : ""}
+                        ${canSync ? `<button type="button" class="button tiny primary" data-sync-single-social="${c.id}" title="Fetch latest views & likes from ${platform}">⚡ Sync</button>` : ""}
                         <button type="button" class="button tiny" data-edit-clip="${c.id}">Edit</button>
                       </div>
                     </td>
@@ -588,7 +605,7 @@
     </div>`;
   }
   function settings() {
-    return `<div class="settings-grid"><section class="panel settings-panel"><h2>Data & backups</h2><p>${S.sample ? "Demo data is in memory only." : S.mode === "cloud" ? "Cloud data belongs to your authenticated user." : "Local data is stored in this browser and is not encrypted. Clearing site data deletes it."}</p><div class="actions">${btn("Export JSON backup", "export")}${!S.sample && S.mode === "local" ? btn("Import JSON backup", "import") : ""}</div><input type="file" id="backup-file" accept=".json,application/json" hidden><small>Backups include contacts and notes. Store them privately. Import replaces local data only after validation and confirmation.</small>${!S.sample && S.mode === "local" ? `<hr><h3>Reset local workspace</h3><p>Export a backup first. Cloud records and the old version’s storage are not affected.</p><div class="actions">${btn("Reset local data", "reset-local")}${btn("Export raw local data", "raw")}</div>` : ""}</section><section class="panel settings-panel"><h2>Appearance</h2><label class="field">Color theme<select id="theme">${["system", "light", "dark"].map((t) => `<option value="${t}" ${document.documentElement.dataset.theme === t ? "selected" : ""}>${t[0].toUpperCase() + t.slice(1)}</option>`).join("")}</select></label><hr><h2>Optional cloud workspace</h2><p>${S.mode === "cloud" ? "Signed in as " + E(S.user?.email) : "Configure your own Supabase project in config.js. Local and cloud workspaces are never automatically merged."}</p>${btn(S.mode === "cloud" ? "Sign out" : "Cloud sign-in", S.mode === "cloud" ? "exit" : "login")}</section>${S.mode === "cloud" ? `<section class="panel settings-panel"><h2>Creator Profile</h2><p>Your cloud identity across your workspaces.</p><div class="field"><label>Display name<input type="text" id="display_name" value="${E(S.profile?.display_name || "")}" placeholder="Creator or Channel Name"></label></div><div class="field"><label>Bio / Production role<input type="text" id="bio" value="${E(S.profile?.bio || "")}" placeholder="e.g. Lead Editor, Clipper, Creator"></label></div><div class="actions"><button class="button primary" id="save-profile-btn" type="button">Save Profile</button></div></section>` : ""}<section class="panel settings-panel"><h2>YouTube API & Analytics Sync</h2><p>Use a free Google Cloud API key with YouTube Data API v3 enabled. Your key is saved locally in your browser for automatic Shorts and channel syncing.</p><form id="youtube-form">${field("key", "Restricted YouTube API key", ytKey, "password", 'autocomplete="off" placeholder="AIzaSy..."')}<div class="actions"><button class="button primary" type="submit">Save & Sync Channels</button>${ytKey ? `<button class="button danger-text" type="button" data-action="clear-yt-key">Clear Key</button>` : ""}</div><p class="form-error" role="alert"></p></form><small>Powers 1-click YouTube Shorts view syncing and channel statistics. Stored privately in this browser.</small></section><section class="panel settings-panel"><h2>Security & Storage</h2><ul><li>Database access is enforced by strict PostgreSQL Row-Level Security (RLS).</li><li>All network traffic is encrypted via HTTPS with publishable key isolation.</li><li>Local and cloud storage layers remain completely segregated.</li><li>Third-party social credentials are never stored or requested.</li></ul><p>Your workspace is architected for clean, distraction-free creator operations.</p></section></div>`;
+    return `<div class="settings-grid"><section class="panel settings-panel"><h2>Data & backups</h2><p>${S.sample ? "Demo data is in memory only." : S.mode === "cloud" ? "Cloud data belongs to your authenticated user." : "Local data is stored in this browser and is not encrypted. Clearing site data deletes it."}</p><div class="actions">${btn("Export JSON backup", "export")}${!S.sample && S.mode === "local" ? btn("Import JSON backup", "import") : ""}</div><input type="file" id="backup-file" accept=".json,application/json" hidden><small>Backups include contacts and notes. Store them privately. Import replaces local data only after validation and confirmation.</small>${!S.sample && S.mode === "local" ? `<hr><h3>Reset local workspace</h3><p>Export a backup first. Cloud records and the old version’s storage are not affected.</p><div class="actions">${btn("Reset local data", "reset-local")}${btn("Export raw local data", "raw")}</div>` : ""}</section><section class="panel settings-panel"><h2>Appearance</h2><label class="field">Color theme<select id="theme">${["system", "light", "dark"].map((t) => `<option value="${t}" ${document.documentElement.dataset.theme === t ? "selected" : ""}>${t[0].toUpperCase() + t.slice(1)}</option>`).join("")}</select></label><hr><h2>Optional cloud workspace</h2><p>${S.mode === "cloud" ? "Signed in as " + E(S.user?.email) : "Configure your own Supabase project in config.js. Local and cloud workspaces are never automatically merged."}</p>${btn(S.mode === "cloud" ? "Sign out" : "Cloud sign-in", S.mode === "cloud" ? "exit" : "login")}</section>${S.mode === "cloud" ? `<section class="panel settings-panel"><h2>Creator Profile</h2><p>Your cloud identity across your workspaces.</p><div class="field"><label>Display name<input type="text" id="display_name" value="${E(S.profile?.display_name || "")}" placeholder="Creator or Channel Name"></label></div><div class="field"><label>Bio / Production role<input type="text" id="bio" value="${E(S.profile?.bio || "")}" placeholder="e.g. Lead Editor, Clipper, Creator"></label></div><div class="actions"><button class="button primary" id="save-profile-btn" type="button">Save Profile</button></div></section>` : ""}<section class="panel settings-panel"><h2>YouTube API & Analytics Sync</h2><p>Use a free Google Cloud API key with YouTube Data API v3 enabled. Your key is saved locally in your browser for automatic Shorts and channel syncing.</p><form id="youtube-form">${field("key", "Restricted YouTube API key", ytKey, "password", 'autocomplete="off" placeholder="AIzaSy..."')}<div class="actions"><button class="button primary" type="submit">Save & Sync Channels</button>${ytKey ? `<button class="button danger-text" type="button" data-action="clear-yt-key">Clear Key</button>` : ""}</div><p class="form-error" role="alert"></p></form><small>Powers 1-click YouTube Shorts view & like syncing. 10,000 free requests daily.</small></section><section class="panel settings-panel"><h2>Instagram & TikTok API Sync</h2><p>Use a free RapidAPI Key to auto-fetch live views and likes for public Instagram Reels and TikTok videos.</p><form id="social-form">${field("rapidapi_key", "RapidAPI Key (for Instagram & TikTok)", rapidApiKey, "password", 'autocomplete="off" placeholder="RapidAPI Key (e.g. 7abc...)"')}${field("meta_token", "Optional Meta Instagram Graph Token", instaMetaToken, "password", 'autocomplete="off" placeholder="IGQV..."')}<div class="actions"><button class="button primary" type="submit">Save Social Keys</button>${rapidApiKey || instaMetaToken ? `<button class="button danger-text" type="button" data-action="clear-social-keys">Clear Social Keys</button>` : ""}</div><p class="form-error" role="alert"></p></form><small>100% free. Keys are stored locally in this browser and never transmitted to any third-party database.</small></section><section class="panel settings-panel"><h2>Security & Storage</h2><ul><li>Database access is enforced by strict PostgreSQL Row-Level Security (RLS).</li><li>All network traffic is encrypted via HTTPS with publishable key isolation.</li><li>Local and cloud storage layers remain completely segregated.</li><li>Third-party social credentials are never stored or requested.</li></ul><p>Your workspace is architected for clean, distraction-free creator operations.</p></section></div>`;
   }
   function auth() {
     const mode = S.authMode || "signin";
@@ -742,7 +759,7 @@
       fields = `<div class="form-grid">${field("name", "Account name *", r.name, "text", 'required maxlength="100" autofocus')}${select("platform", "Platform", C.platforms, r.platform || "youtube")}<div class="full">${field("url", "Channel URL *", r.url, "text", 'required inputmode="url" placeholder="https://youtube.com/@channel"')}</div>${field("handle", "Handle / username", r.handle, "text", 'maxlength="100"')}${select("niche", "Content niche", Object.fromEntries(C.niches.map((k) => [k, k])), r.niche || "other")}${select("priority", "Priority", { high: "High", medium: "Medium", low: "Low" }, r.priority || "medium")}${select("status", "Account status", { active: "Active", paused: "Paused", review: "Review" }, r.status || "active")}${field("views", "Recorded channel views", r.views || 0, "number", 'min="0" step="1"')}${field("subscribers", "YouTube subscribers", r.subscribers || 0, "number", 'min="0" step="1"')}${field("videos", "Published videos", r.videos || 0, "number", 'min="0" step="1"')}${field("email", "Contact email", r.email, "email")}${field("phone", "Contact phone", r.phone, "tel")}<label class="field full">Content notes<textarea name="notes" rows="3" maxlength="2000">${E(r.notes || "")}</textarea></label></div>`;
     else {
       const defaultDate = targetDate || (r.created_at ? r.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10));
-      fields = `<div class="form-grid"><div class="full">${field("title", "Clip title / hook *", r.title, "text", 'required maxlength="180" autofocus')}</div>${select("account_id", "From channel/account", { "": "Unlinked", ...Object.fromEntries(S.data.accounts.map((a) => [a.id, a.name])) }, r.account_id || "")}${field("target_date", "Target publish date", defaultDate, "date")}${select("priority", "Priority", { high: "High", medium: "Medium", low: "Low" }, r.priority || "medium")}<div class="full">${field("source_url", "Source video URL (for long-form clipping)", r.source_url, "text", 'inputmode="url" placeholder="https://youtube.com/watch?v=..."')}</div><div class="full">${select("status", "Workflow status", C.stages, r.status || stage || "queued")}</div></div><fieldset id="performance-fields" ${(r.status || stage) !== "posted" ? "hidden" : ""}><legend>Recorded performance</legend><p>Manual snapshots or auto-fetched via YouTube. 24h views cannot exceed total views.</p><div class="form-grid"><div class="views-fetch-group">${field("views", "Total clip views", r.views || 0, "number", 'min="0" step="1"')}<button type="button" class="button tiny primary fetch-views-btn" data-action="fetch-clip-views" title="Auto-fetch views & likes if YouTube URL is provided">⚡ Fetch Views</button></div>${field("views_24h", "Recorded 24h views", r.views_24h || 0, "number", 'min="0" step="1"')}${field("likes", "Recorded likes", r.likes || 0, "number", 'min="0" step="1"')}${field("geo", "Top audience location", r.geo)}<div class="full">${select("age_group", "Top age group", { "": "Not recorded", "13–17": "13–17", "18–24": "18–24", "25–34": "25–34", "35–44": "35–44", "45+": "45+" }, r.age_group || "")}</div><div class="full yt-live-stats-badge" id="yt-live-stats" hidden></div></div></fieldset>`;
+      fields = `<div class="form-grid"><div class="full">${field("title", "Clip title / hook *", r.title, "text", 'required maxlength="180" autofocus')}</div>${select("account_id", "From channel/account", { "": "Unlinked", ...Object.fromEntries(S.data.accounts.map((a) => [a.id, a.name])) }, r.account_id || "")}${field("target_date", "Target publish date", defaultDate, "date")}${select("priority", "Priority", { high: "High", medium: "Medium", low: "Low" }, r.priority || "medium")}<div class="full">${field("source_url", "Source video URL (for long-form clipping)", r.source_url, "text", 'inputmode="url" placeholder="https://youtube.com/watch?v=... or instagram.com/reel/... or tiktok.com/@user/video/..."')}</div><div class="full">${select("status", "Workflow status", C.stages, r.status || stage || "queued")}</div></div><fieldset id="performance-fields" ${(r.status || stage) !== "posted" ? "hidden" : ""}><legend>Recorded performance</legend><p>Manual snapshots or auto-fetched via YouTube, Instagram, or TikTok. 24h views cannot exceed total views.</p><div class="form-grid"><div class="views-fetch-group">${field("views", "Total clip views", r.views || 0, "number", 'min="0" step="1"')}<button type="button" class="button tiny primary fetch-views-btn" data-action="fetch-clip-views" title="Auto-fetch views & likes for YouTube, Instagram, or TikTok">⚡ Fetch Views</button></div>${field("views_24h", "Recorded 24h views", r.views_24h || 0, "number", 'min="0" step="1"')}${field("likes", "Recorded likes", r.likes || 0, "number", 'min="0" step="1"')}${field("geo", "Top audience location", r.geo)}<div class="full">${select("age_group", "Top age group", { "": "Not recorded", "13–17": "13–17", "18–24": "18–24", "25–34": "25–34", "35–44": "35–44", "45+": "45+" }, r.age_group || "")}</div><div class="full yt-live-stats-badge" id="yt-live-stats" hidden></div></div></fieldset>`;
     }
     openDialog(
       `${dialogHead((id ? "Edit " : "Add ") + kind, kind === "account" ? "Channel contacts and notes. Never paste passwords or recovery codes." : "Plan, edit, and schedule clips from long-form content.")}<form id="record-form" data-kind="${kind}" data-id="${id || ""}">${fields}<p class="form-error" role="alert"></p><footer class="dialog-foot">${id ? `<button class="button danger-text" type="button" data-delete="${kind}" data-id="${id}">Delete ${kind}</button>` : "<span></span>"}<div><button class="button" type="button" data-action="close-dialog">Cancel</button><button class="button primary" type="submit">Save ${kind}</button></div></footer></form>`,
@@ -974,8 +991,12 @@
     ++S.epoch;
     try {
       ytKey = localStorage.getItem("clipvault.ytKey") || "";
+      rapidApiKey = localStorage.getItem("clipvault.rapidApiKey") || "";
+      instaMetaToken = localStorage.getItem("clipvault.instaMetaToken") || "";
     } catch {
       ytKey = "";
+      rapidApiKey = "";
+      instaMetaToken = "";
     }
     Object.assign(S, {
       view: "home",
@@ -1038,6 +1059,203 @@
       likes: Number(item.statistics?.likeCount || 0),
       comments: Number(item.statistics?.commentCount || 0),
     };
+  }
+  function extractInstagramCode(url) {
+    if (!url) return null;
+    const m = String(url).match(/(?:instagram\.com\/(?:reel|reels|p)\/)([a-zA-Z0-9_-]+)/i);
+    return m ? m[1] : null;
+  }
+  function extractTikTokInfo(url) {
+    if (!url) return null;
+    const s = String(url).trim();
+    if (!/(?:tiktok\.com|vt\.tiktok\.com|vm\.tiktok\.com)/i.test(s)) return null;
+    const idMatch = s.match(/(?:@[\w.-]+\/video\/|v\/|t\/)(\d+)/);
+    return {
+      id: idMatch ? idMatch[1] : null,
+      url: s,
+    };
+  }
+  function detectPlatformFromUrl(url) {
+    if (!url) return null;
+    if (extractYouTubeVideoId(url)) return "youtube";
+    if (extractInstagramCode(url)) return "instagram";
+    if (extractTikTokInfo(url)) return "tiktok";
+    return null;
+  }
+  async function fetchInstagramClip(url) {
+    const code = extractInstagramCode(url);
+    if (!code) throw Error("Enter a valid Instagram Reel or Post URL (e.g. instagram.com/reel/C...).");
+    
+    const rKey = (rapidApiKey || "").trim();
+    const mToken = (instaMetaToken || "").trim();
+
+    if (!rKey && !mToken) {
+      throw Error("Configure a free RapidAPI Key or Meta Token in Settings to fetch Instagram metrics.");
+    }
+
+    if (rKey) {
+      const res = await fetch(`https://instagram-bulk-scraper-latest.p.rapidapi.com/webpost_info?shortcode=${code}`, {
+        headers: {
+          "x-rapidapi-key": rKey,
+          "x-rapidapi-host": "instagram-bulk-scraper-latest.p.rapidapi.com",
+        },
+        signal: AbortSignal.timeout(12000),
+      });
+      const data = await res.json();
+      if (!res.ok || data.message || data.error) {
+        throw Error(data.message || data.error || "Failed to fetch Instagram Reel. Check your RapidAPI key.");
+      }
+      
+      const item = data.data || data;
+      const views = Number(item.video_play_count || item.play_count || item.view_count || item.video_view_count || 0);
+      const likes = Number(item.like_count || item.likes || item.edge_media_preview_like?.count || 0);
+      const comments = Number(item.comment_count || item.comments || item.edge_media_to_comment?.count || 0);
+      const title = item.caption || item.edge_media_to_caption?.edges?.[0]?.node?.text || `Instagram Reel (${code})`;
+      const timestamp = item.taken_at || item.taken_at_timestamp;
+      const publishedAt = timestamp ? new Date(timestamp * 1000).toISOString() : "";
+
+      return {
+        id: code,
+        platform: "instagram",
+        title: title.slice(0, 180),
+        publishedAt,
+        views,
+        likes,
+        comments,
+      };
+    }
+
+    if (mToken) {
+      const oembedParams = new URLSearchParams({
+        url: url.startsWith("http") ? url : "https://" + url,
+        access_token: mToken,
+      });
+      const res = await fetch("https://graph.facebook.com/v19.0/instagram_oembed?" + oembedParams, {
+        signal: AbortSignal.timeout(12000),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw Error(data.error?.message || "Meta API error");
+      return {
+        id: code,
+        platform: "instagram",
+        title: (data.title || `Instagram Reel (${code})`).slice(0, 180),
+        publishedAt: "",
+        views: 0,
+        likes: 0,
+        comments: 0,
+      };
+    }
+  }
+  async function fetchTikTokClip(url) {
+    const info = extractTikTokInfo(url);
+    if (!info) throw Error("Enter a valid TikTok video URL (e.g. tiktok.com/@user/video/... or vt.tiktok.com/...).");
+    
+    const rKey = (rapidApiKey || "").trim();
+    if (!rKey) {
+      throw Error("Configure a free RapidAPI Key in Settings to auto-fetch TikTok metrics.");
+    }
+
+    const cleanUrl = encodeURIComponent(info.url.startsWith("http") ? info.url : "https://" + info.url);
+    const res = await fetch(`https://tiktok-all-in-one.p.rapidapi.com/index?url=${cleanUrl}`, {
+      headers: {
+        "x-rapidapi-key": rKey,
+        "x-rapidapi-host": "tiktok-all-in-one.p.rapidapi.com",
+      },
+      signal: AbortSignal.timeout(12000),
+    });
+    const data = await res.json();
+    if (!res.ok || data.message || data.error) {
+      throw Error(data.message || data.error || "Failed to fetch TikTok stats. Check your RapidAPI key.");
+    }
+
+    const item = data.data || data;
+    const views = Number(item.play_count || item.views || item.itemInfo?.itemStruct?.stats?.playCount || item.stats?.playCount || 0);
+    const likes = Number(item.digg_count || item.likes || item.itemInfo?.itemStruct?.stats?.diggCount || item.stats?.diggCount || 0);
+    const comments = Number(item.comment_count || item.comments || item.itemInfo?.itemStruct?.stats?.commentCount || item.stats?.commentCount || 0);
+    const title = item.title || item.desc || item.itemInfo?.itemStruct?.desc || (info.id ? `TikTok Clip (${info.id})` : "TikTok Clip");
+    const createTime = item.create_time || item.itemInfo?.itemStruct?.createTime;
+    const publishedAt = createTime ? new Date(createTime * 1000).toISOString() : "";
+
+    return {
+      id: info.id || "tiktok",
+      platform: "tiktok",
+      title: title.slice(0, 180),
+      publishedAt,
+      views,
+      likes,
+      comments,
+    };
+  }
+  async function fetchUniversalClip(url) {
+    const platform = detectPlatformFromUrl(url);
+    if (!platform) {
+      throw Error("Enter a valid YouTube, Instagram, or TikTok link in Source video URL.");
+    }
+    if (platform === "youtube") {
+      const res = await fetchYouTubeClip(url);
+      return { ...res, platform: "youtube" };
+    }
+    if (platform === "instagram") {
+      return await fetchInstagramClip(url);
+    }
+    if (platform === "tiktok") {
+      return await fetchTikTokClip(url);
+    }
+  }
+  async function syncAllSocialClips() {
+    if (!S.loaded) throw Error("Load a workspace first.");
+    let updatedCount = 0;
+    const targets = [];
+    for (const c of S.data.clips) {
+      const plat = detectPlatformFromUrl(c.source_url);
+      if (plat) targets.push({ clip: c, platform: plat });
+    }
+
+    if (!targets.length) {
+      throw Error("No clips with YouTube, Instagram, or TikTok URLs found in Source URL.");
+    }
+
+    // 1. First sync all YouTube clips in fast batch
+    const ytTargets = targets.filter((t) => t.platform === "youtube");
+    if (ytTargets.length && (ytKey || "").trim()) {
+      try {
+        await syncYouTubeClips();
+      } catch (err) {
+        console.warn("YouTube batch sync note:", err.message);
+      }
+    }
+
+    // 2. Sync Instagram and TikTok clips individually if RapidAPI / Meta key is configured
+    const socialTargets = targets.filter((t) => t.platform !== "youtube");
+    for (const t of socialTargets) {
+      try {
+        const info = await fetchUniversalClip(t.clip.source_url);
+        const freshViews = info.views;
+        const freshLikes = info.likes;
+        const pubDate = info.publishedAt ? new Date(info.publishedAt) : null;
+        const isWithin24h = pubDate && (Date.now() - pubDate.getTime() <= 24 * 60 * 60 * 1000);
+        
+        let views_24h = t.clip.views_24h || 0;
+        if (isWithin24h) {
+          views_24h = freshViews;
+        } else if (!views_24h || views_24h === 0) {
+          views_24h = freshViews;
+        } else {
+          views_24h = Math.min(views_24h, freshViews);
+        }
+
+        if (freshViews !== t.clip.views || freshLikes !== (t.clip.likes || 0) || views_24h !== (t.clip.views_24h || 0)) {
+          const status = (t.clip.status !== "posted" && freshViews > 0) ? "posted" : t.clip.status;
+          await save("clip", { ...t.clip, views: freshViews, views_24h, likes: freshLikes, status }, t.clip.id);
+          updatedCount++;
+        }
+      } catch (e) {
+        console.warn(`Skipping clip ${t.clip.id}:`, e.message);
+      }
+    }
+
+    refresh();
+    notify(`Social sync complete (${updatedCount} clip(s) updated).`);
   }
   async function syncYouTubeClips() {
     const key = (ytKey || "").trim();
@@ -1197,7 +1415,7 @@
   }
   document.addEventListener("submit", async (e) => {
     const form = e.target;
-    if (!["record-form", "auth-form", "youtube-form", "quicklog-form"].includes(form.id)) return;
+    if (!["record-form", "auth-form", "youtube-form", "social-form", "quicklog-form"].includes(form.id)) return;
     e.preventDefault();
     const values = Object.fromEntries(new FormData(form));
     await busy(form, async () => {
@@ -1211,6 +1429,18 @@
         notify("Saved successfully.");
       }
       if (form.id === "youtube-form") await youtube(values.key);
+      if (form.id === "social-form") {
+        rapidApiKey = (values.rapidapi_key || "").trim();
+        instaMetaToken = (values.meta_token || "").trim();
+        try {
+          if (rapidApiKey) localStorage.setItem("clipvault.rapidApiKey", rapidApiKey);
+          else localStorage.removeItem("clipvault.rapidApiKey");
+          if (instaMetaToken) localStorage.setItem("clipvault.instaMetaToken", instaMetaToken);
+          else localStorage.removeItem("clipvault.instaMetaToken");
+        } catch {}
+        refresh();
+        notify("Instagram & TikTok API keys saved successfully!");
+      }
       if (form.id === "auth-form") {
         const mode = form.dataset.mode || "signin";
         const sb = await client();
@@ -1431,12 +1661,12 @@
       refresh();
       return;
     }
-    if (b.dataset.syncSingleYt) {
-      const clipId = b.dataset.syncSingleYt;
+    if (b.dataset.syncSingleSocial || b.dataset.syncSingleYt) {
+      const clipId = b.dataset.syncSingleSocial || b.dataset.syncSingleYt;
       const c = S.data.clips.find((item) => item.id === clipId);
       if (!c) return;
       await busy(b, async () => {
-        const info = await fetchYouTubeClip(c.source_url);
+        const info = await fetchUniversalClip(c.source_url);
         const freshViews = info.views;
         const freshLikes = info.likes;
         const pubDate = info.publishedAt ? new Date(info.publishedAt) : null;
@@ -1452,12 +1682,18 @@
         const status = (c.status !== "posted" && freshViews > 0) ? "posted" : c.status;
         await save("clip", { ...c, views: freshViews, views_24h, likes: freshLikes, status }, c.id);
         refresh();
-        notify(`Updated "${c.title}": ${compact(freshViews)} views, ${compact(freshLikes)} likes!`);
+        const platName = info.platform ? info.platform.toUpperCase() : "Social";
+        notify(`Updated "${c.title}" via ${platName}: ${compact(freshViews)} views, ${compact(freshLikes)} likes!`);
       });
       return;
     }
     const action = b.dataset.action;
     try {
+      if (action === "sync-all-social") {
+        await busy(b, async () => {
+          await syncAllSocialClips();
+        });
+      }
       if (action === "sync-yt-clips") {
         await busy(b, async () => {
           await syncYouTubeClips();
@@ -1477,11 +1713,11 @@
 
         const url = urlInput?.value?.trim();
         if (!url) {
-          notify("Enter a YouTube Shorts or video URL in 'Source video URL' first.", true);
+          notify("Enter a YouTube Shorts, Instagram Reel, or TikTok URL in 'Source video URL' first.", true);
           return;
         }
         await busy(b, async () => {
-          const info = await fetchYouTubeClip(url);
+          const info = await fetchUniversalClip(url);
           if (viewsInput) viewsInput.value = info.views;
           if (likesInput) likesInput.value = info.likes;
           if (titleInput && !titleInput.value.trim() && info.title) {
@@ -1504,10 +1740,11 @@
 
           if (statsBadge) {
             statsBadge.hidden = false;
-            statsBadge.innerHTML = `<span>⚡ YouTube Live Stats: <b>${exact(info.views)}</b> views · <b>${exact(info.likes)}</b> likes · <b>${exact(info.comments)}</b> comments${pubDate ? ` · Published ${pubDate.toLocaleDateString()}` : ""}</span>`;
+            const platLabel = info.platform === "youtube" ? "YouTube" : info.platform === "instagram" ? "Instagram" : "TikTok";
+            statsBadge.innerHTML = `<span>⚡ ${platLabel} Live Stats: <b>${exact(info.views)}</b> views · <b>${exact(info.likes)}</b> likes · <b>${exact(info.comments)}</b> comments${pubDate ? ` · Published ${pubDate.toLocaleDateString()}` : ""}</span>`;
           }
 
-          notify(`Fetched ${compact(info.views)} views & ${compact(info.likes)} likes from YouTube!`);
+          notify(`Fetched ${compact(info.views)} views & ${compact(info.likes)} likes!`);
         });
       }
       if (action === "clear-yt-key") {
@@ -1517,6 +1754,16 @@
         } catch {}
         refresh();
         notify("YouTube API key cleared.");
+      }
+      if (action === "clear-social-keys") {
+        rapidApiKey = "";
+        instaMetaToken = "";
+        try {
+          localStorage.removeItem("clipvault.rapidApiKey");
+          localStorage.removeItem("clipvault.instaMetaToken");
+        } catch {}
+        refresh();
+        notify("Instagram & TikTok keys cleared.");
       }
       if (action === "demo") await local(true);
       if (action === "local") await local();

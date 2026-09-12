@@ -61,17 +61,20 @@ ClipVault supports deep linking and direct URL routes:
   - **`✅ Mark Posted`**: 1-click workflow advancement once published.
 - **Target Date Scheduling**: Set target publishing dates directly inside the clip creation modal with zero database migrations.
 
-### 2. ⚡ YouTube Shorts 1-Click Auto-Sync
-- **Universal URL Parser**: Supports `youtube.com/shorts/...`, `youtu.be/...`, `youtube.com/watch?v=...`, and `embed/...`.
-- **Modal ⚡ Fetch Views**: Paste a YouTube URL into *Source video URL* and click **`⚡ Fetch Views`**. It fetches the exact view count from Google's YouTube Data API v3 in real-time, auto-fills the *Total clip views* field, auto-populates the hook title if empty, and auto-marks the clip as `posted`.
-- **Global Batch Sync**: In Analytics, click **`⚡ Sync YouTube Views`** to batch-query up to 50 YouTube clips simultaneously in a single HTTP request (`?id=id1,id2,...`) to minimize API quota consumption.
-- **Persistent Key Storage**: Your YouTube Data API v3 key is saved client-side in `localStorage["clipvault.ytKey"]`. It is never sent to any intermediary server and can be cleared at any time from Settings.
+### 2. ⚡ Universal Social Analytics Auto-Sync (YouTube, Instagram Reels & TikTok)
+- **Universal URL Parser**: Intelligently detects and parses:
+  - **YouTube Shorts & Videos**: `youtube.com/shorts/...`, `youtu.be/...`, `youtube.com/watch?v=...`, and `embed/...`.
+  - **Instagram Reels & Posts**: `instagram.com/reel/...`, `instagram.com/p/...`, and `instagram.com/reels/...`.
+  - **TikTok Videos**: `tiktok.com/@user/video/...`, `vt.tiktok.com/...`, and `vm.tiktok.com/...`.
+- **Modal ⚡ Fetch Views**: Paste any supported URL into *Source video URL* and click **`⚡ Fetch Views`**. It fetches the latest view count, like count, and comments, auto-fills the *Total clip views* and *Likes* fields, computes 24h metrics, auto-populates the hook title if empty, and auto-marks the clip as `posted`.
+- **Global Batch Sync**: In Analytics, click **`⚡ Sync Social Views`** to automatically refresh metrics across all your clips with linked YouTube, Instagram, and TikTok source URLs in one go.
+- **Persistent Local Key Storage**: Your YouTube Data API key and RapidAPI Social key are saved client-side in `localStorage`. They are never sent to any intermediary server or database and can be cleared at any time from Settings.
 
 ### 3. 📊 Multi-Platform Quick-Log Mode (Spreadsheet Entry)
 - Switch between **`[ 📊 Overview ]`** and **`[ ⚡ Quick-Log Table ]`** in Analytics.
-- High-velocity spreadsheet table with editable inputs for **Total Views** and **24h Views**.
+- High-velocity spreadsheet table with editable inputs for **Total Views**, **24h Views**, and **Likes**.
 - **Keyboard-Optimized**: Press <kbd>Tab</kbd> to move rapidly between cells and log metrics across YouTube Shorts, TikTok, Instagram Reels, and Facebook in seconds.
-- **Single-Clip Sync**: Clips with YouTube links include an inline **`⚡ Sync`** button directly in the table for instantaneous metric updates.
+- **Single-Clip Sync**: Clips with YouTube, Instagram, or TikTok links include an inline **`⚡ Sync`** button directly in the table for instantaneous metric updates.
 - **Data Integrity Guard**: Enforces that 24h views cannot exceed total views, preventing corrupt metrics before saving.
 
 ### 4. 👥 Channel & Account Management
@@ -123,6 +126,20 @@ ClipVault connects directly to Google's YouTube Data API v3 from your browser:
 
 > [!TIP]
 > Google provides 10,000 free quota units per day. Fetching video stats costs only 1 unit per request, and batch-fetching up to 50 videos at once still costs only 1 unit!
+
+---
+
+## 📱 Setting Up Instagram & TikTok Auto-Sync (Optional)
+
+ClipVault supports live analytics syncing for public Instagram Reels and TikTok videos using a free RapidAPI key:
+
+1. Sign up for a free account at [RapidAPI](https://rapidapi.com/).
+2. Copy your free default application key (`x-rapidapi-key`).
+3. Subscribe to the free tiers of:
+   - **[Instagram Bulk Scraper](https://rapidapi.com/mrngstar/api/instagram-bulk-scraper-latest)** (free quota for public post and reel stats).
+   - **[TikTok All-In-One](https://rapidapi.com/fomadash-fomadash-default/api/tiktok-all-in-one)** (free quota for TikTok video play counts and engagement).
+4. In ClipVault, open **Settings** ➔ paste your key under **Instagram & TikTok API Sync** ➔ click **Save Social Keys**.
+5. Your key is stored locally in your browser and used to auto-fetch views, likes, and comments whenever you paste a Reel or TikTok URL.
 
 ---
 

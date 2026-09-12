@@ -82,13 +82,17 @@
       return data;
     }
     async save(table, row, id) {
+      const allowed = (fields[table] || "").split(",").map((k) => k.trim());
+      const clean = Object.fromEntries(
+        Object.entries(row).filter(([k]) => allowed.includes(k))
+      );
       const q = id
         ? this.client
             .from(table)
-            .update(row)
+            .update(clean)
             .eq("user_id", this.user.id)
             .eq("id", id)
-        : this.client.from(table).insert({ ...row, user_id: this.user.id });
+        : this.client.from(table).insert({ ...clean, user_id: this.user.id });
       const { data, error } = await q.select(fields[table]).single();
       if (error) throw error;
       return data;

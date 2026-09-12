@@ -105,6 +105,7 @@
       priority: option(v.priority, priorities, "medium"),
       views: number(v.views),
       views_24h: number(v.views_24h),
+      likes: number(v.likes),
       geo: text(v.geo, "Location", 100),
       age_group: option(
         v.age_group,
@@ -156,6 +157,7 @@
       channelViews: d.accounts.reduce((s, a) => s + a.views, 0),
       clipViews: posted.reduce((s, c) => s + c.views, 0),
       recorded24h: posted.reduce((s, c) => s + c.views_24h, 0),
+      likes: posted.reduce((s, c) => s + (c.likes || 0), 0),
     };
   }
   function demo() {

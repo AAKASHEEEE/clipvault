@@ -1922,6 +1922,19 @@ footer {
   padding: 2px 8px;
   font-size: 11px;
 }
+.yt-live-stats-badge {
+  background: rgba(27, 85, 217, 0.08);
+  border: 1px solid rgba(27, 85, 217, 0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text);
+  margin-top: 4px;
+}
+:root[data-theme="dark"] .yt-live-stats-badge {
+  background: rgba(165, 194, 255, 0.08);
+  border-color: rgba(165, 194, 255, 0.2);
+}
 @media (max-width: 768px) {
   .analytics-toolbar {
     flex-direction: column;

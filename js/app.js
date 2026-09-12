@@ -378,7 +378,7 @@
   }
   function clipCard(c) {
     const a = S.data.accounts.find((a) => a.id === c.account_id);
-    return `<article class="clip-card" draggable="true" data-clip-id="${c.id}"><div class="clip-top"><span class="platform-text ${a?.platform || ""}">${a ? platformMark(a.platform) : ""}${E(a ? C.platforms[a.platform] : "Unlinked")}</span>${badge(c.priority, c.priority === "high" ? "orange" : "")}</div><button class="clip-title" data-edit-clip="${c.id}">${E(c.title)}</button><p>${E(a?.name || "No account linked")}</p>${c.status === "posted" ? `<p class="clip-views"><b>${compact(c.views)}</b> recorded views</p>` : ""}<div class="source-link">${link(c.source_url, "Source video")}</div><div class="clip-foot"><select data-move="${c.id}" aria-label="Status for ${E(c.title)}">${Object.entries(
+    return `<article class="clip-card" draggable="true" data-clip-id="${c.id}"><div class="clip-top"><span class="platform-text ${a?.platform || ""}">${a ? platformMark(a.platform) : ""}${E(a ? C.platforms[a.platform] : "Unlinked")}</span>${badge(c.priority, c.priority === "high" ? "orange" : "")}</div><button class="clip-title" data-edit-clip="${c.id}">${E(c.title)}</button><p>${E(a?.name || "No account linked")}</p>${c.status === "posted" ? `<p class="clip-views"><b>${compact(c.views)}</b> views${c.likes ? ` · <b>${compact(c.likes)}</b> likes` : ""}</p>` : ""}<div class="source-link">${link(c.source_url, "Source video")}</div><div class="clip-foot"><select data-move="${c.id}" aria-label="Status for ${E(c.title)}">${Object.entries(
       C.stages,
     )
       .map(
@@ -513,7 +513,7 @@
     });
     const top = (o) =>
       Object.entries(o).sort((a, b) => b[1] - a[1])[0]?.[0] || "Not recorded";
-    return `${toolbarHtml}<div class="notice"><p><b>Manual records, not live analytics.</b> Channel totals and posted-clip views stay separate because they may overlap.</p></div><section class="stats">${stat("Posted-clip views", m.clipViews, m.posted + " published clips", true)}${stat("Recorded 24h views", m.recorded24h, "Entered snapshots; reporting dates may differ")}${stat("Channel views", m.channelViews, "Separate lifetime totals")}${stat("In production", m.progress, "Excluded from performance totals")}</section><div class="analytics-grid"><section class="panel"><div class="panel-title"><div><h2>Posted-clip performance</h2><p>Ranked by recorded views.</p></div></div>${posted.length ? `<div class="table-scroll"><table><thead><tr><th>Clip / channel</th><th>Total views</th><th>Recorded 24h</th></tr></thead><tbody>${posted.map((c) => `<tr><td><button class="text-button" data-edit-clip="${c.id}">${E(c.title)}</button><small>${E(S.data.accounts.find((a) => a.id === c.account_id)?.name || "Unlinked")}</small></td><td>${exact(c.views)}</td><td>${exact(c.views_24h)}</td></tr>`).join("")}</tbody></table></div>` : none("Your results start here", "Mark a clip as posted and enter its performance.", "clip", "Add a posted clip")}</section><section class="panel"><div class="panel-title"><div><h2>By platform</h2><p>Posted-clip views only.</p></div></div><div class="breakdown">${[...Object.entries(C.platforms), ["unlinked", "Unlinked"]].map(([k, v]) => `<div><span>${v}</span><b>${compact(posted.filter((c) => (S.data.accounts.find((a) => a.id === c.account_id)?.platform || "unlinked") === k).reduce((s, c) => s + c.views, 0))}</b></div>`).join("")}</div><div class="audience"><h3>Recorded audience labels</h3><p>Top location <b>${E(top(geo))}</b></p><p>Top age group <b>${E(top(age))}</b></p><small>Weighted by each clip’s total views. Not a demographic distribution.</small></div></section></div>`;
+    return `${toolbarHtml}<div class="notice"><p><b>Manual records, not live analytics.</b> Channel totals and posted-clip views stay separate because they may overlap.</p></div><section class="stats">${stat("Posted-clip views", m.clipViews, m.posted + " published clips", true)}${stat("Recorded 24h views", m.recorded24h, "Entered snapshots; reporting dates may differ")}${stat("Total clip likes", m.likes, "Recorded likes across clips")}${stat("Channel views", m.channelViews, "Separate lifetime totals")}</section><div class="analytics-grid"><section class="panel"><div class="panel-title"><div><h2>Posted-clip performance</h2><p>Ranked by recorded views.</p></div></div>${posted.length ? `<div class="table-scroll"><table><thead><tr><th>Clip / channel</th><th>Total views</th><th>Recorded 24h</th><th>Likes</th></tr></thead><tbody>${posted.map((c) => `<tr><td><button class="text-button" data-edit-clip="${c.id}">${E(c.title)}</button><small>${E(S.data.accounts.find((a) => a.id === c.account_id)?.name || "Unlinked")}</small></td><td>${exact(c.views)}</td><td>${exact(c.views_24h)}</td><td>${exact(c.likes || 0)}</td></tr>`).join("")}</tbody></table></div>` : none("Your results start here", "Mark a clip as posted and enter its performance.", "clip", "Add a posted clip")}</section><section class="panel"><div class="panel-title"><div><h2>By platform</h2><p>Posted-clip views only.</p></div></div><div class="breakdown">${[...Object.entries(C.platforms), ["unlinked", "Unlinked"]].map(([k, v]) => `<div><span>${v}</span><b>${compact(posted.filter((c) => (S.data.accounts.find((a) => a.id === c.account_id)?.platform || "unlinked") === k).reduce((s, c) => s + c.views, 0))}</b></div>`).join("")}</div><div class="audience"><h3>Recorded audience labels</h3><p>Top location <b>${E(top(geo))}</b></p><p>Top age group <b>${E(top(age))}</b></p><small>Weighted by each clip’s total views. Not a demographic distribution.</small></div></section></div>`;
   }
   function quickLogView() {
     const clips = S.data.clips;
@@ -535,12 +535,13 @@
             <table class="quick-log-table">
               <thead>
                 <tr>
-                  <th style="width: 120px;">Platform</th>
+                  <th style="width: 110px;">Platform</th>
                   <th>Clip Title / Hook</th>
                   <th>Channel</th>
-                  <th style="width: 100px;">Status</th>
-                  <th style="width: 150px;">Total Views</th>
-                  <th style="width: 150px;">24h Views</th>
+                  <th style="width: 90px;">Status</th>
+                  <th style="width: 130px;">Total Views</th>
+                  <th style="width: 130px;">24h Views</th>
+                  <th style="width: 110px;">Likes</th>
                   <th style="width: 120px;">Actions</th>
                 </tr>
               </thead>
@@ -565,8 +566,11 @@
                       <input type="number" name="views_24h_${c.id}" value="${c.views_24h || 0}" min="0" step="1" class="quick-log-input" aria-label="24h views for ${E(c.title)}">
                     </td>
                     <td>
+                      <input type="number" name="likes_${c.id}" value="${c.likes || 0}" min="0" step="1" class="quick-log-input" aria-label="Likes for ${E(c.title)}">
+                    </td>
+                    <td>
                       <div class="quick-actions-cell">
-                        ${isYT ? `<button type="button" class="button tiny primary" data-sync-single-yt="${c.id}" title="Fetch latest views from YouTube">⚡ Sync</button>` : ""}
+                        ${isYT ? `<button type="button" class="button tiny primary" data-sync-single-yt="${c.id}" title="Fetch latest views & likes from YouTube">⚡ Sync</button>` : ""}
                         <button type="button" class="button tiny" data-edit-clip="${c.id}">Edit</button>
                       </div>
                     </td>
@@ -576,7 +580,7 @@
             </table>
           </div>
           <div class="quick-log-foot">
-            <small>Tip: Press Tab to move between view inputs. Status auto-advances to "posted" if views > 0.</small>
+            <small>Tip: Press Tab to move between view & like inputs. Status auto-advances to "posted" if views > 0.</small>
             <button type="submit" class="button primary">Save All Changes</button>
           </div>
         </form>
@@ -738,7 +742,7 @@
       fields = `<div class="form-grid">${field("name", "Account name *", r.name, "text", 'required maxlength="100" autofocus')}${select("platform", "Platform", C.platforms, r.platform || "youtube")}<div class="full">${field("url", "Channel URL *", r.url, "text", 'required inputmode="url" placeholder="https://youtube.com/@channel"')}</div>${field("handle", "Handle / username", r.handle, "text", 'maxlength="100"')}${select("niche", "Content niche", Object.fromEntries(C.niches.map((k) => [k, k])), r.niche || "other")}${select("priority", "Priority", { high: "High", medium: "Medium", low: "Low" }, r.priority || "medium")}${select("status", "Account status", { active: "Active", paused: "Paused", review: "Review" }, r.status || "active")}${field("views", "Recorded channel views", r.views || 0, "number", 'min="0" step="1"')}${field("subscribers", "YouTube subscribers", r.subscribers || 0, "number", 'min="0" step="1"')}${field("videos", "Published videos", r.videos || 0, "number", 'min="0" step="1"')}${field("email", "Contact email", r.email, "email")}${field("phone", "Contact phone", r.phone, "tel")}<label class="field full">Content notes<textarea name="notes" rows="3" maxlength="2000">${E(r.notes || "")}</textarea></label></div>`;
     else {
       const defaultDate = targetDate || (r.created_at ? r.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10));
-      fields = `<div class="form-grid"><div class="full">${field("title", "Clip title / hook *", r.title, "text", 'required maxlength="180" autofocus')}</div>${select("account_id", "From channel/account", { "": "Unlinked", ...Object.fromEntries(S.data.accounts.map((a) => [a.id, a.name])) }, r.account_id || "")}${field("target_date", "Target publish date", defaultDate, "date")}${select("priority", "Priority", { high: "High", medium: "Medium", low: "Low" }, r.priority || "medium")}<div class="full">${field("source_url", "Source video URL (for long-form clipping)", r.source_url, "text", 'inputmode="url" placeholder="https://youtube.com/watch?v=..."')}</div><div class="full">${select("status", "Workflow status", C.stages, r.status || stage || "queued")}</div></div><fieldset id="performance-fields" ${(r.status || stage) !== "posted" ? "hidden" : ""}><legend>Recorded performance</legend><p>Manual snapshots, not live data. 24h views cannot exceed total views.</p><div class="form-grid"><div class="views-fetch-group">${field("views", "Total clip views", r.views || 0, "number", 'min="0" step="1"')}<button type="button" class="button tiny primary fetch-views-btn" data-action="fetch-clip-views" title="Auto-fetch views if YouTube URL is provided">⚡ Fetch Views</button></div>${field("views_24h", "Recorded 24h views", r.views_24h || 0, "number", 'min="0" step="1"')}${field("geo", "Top audience location", r.geo)}${select("age_group", "Top age group", { "": "Not recorded", "13–17": "13–17", "18–24": "18–24", "25–34": "25–34", "35–44": "35–44", "45+": "45+" }, r.age_group || "")}</div></fieldset>`;
+      fields = `<div class="form-grid"><div class="full">${field("title", "Clip title / hook *", r.title, "text", 'required maxlength="180" autofocus')}</div>${select("account_id", "From channel/account", { "": "Unlinked", ...Object.fromEntries(S.data.accounts.map((a) => [a.id, a.name])) }, r.account_id || "")}${field("target_date", "Target publish date", defaultDate, "date")}${select("priority", "Priority", { high: "High", medium: "Medium", low: "Low" }, r.priority || "medium")}<div class="full">${field("source_url", "Source video URL (for long-form clipping)", r.source_url, "text", 'inputmode="url" placeholder="https://youtube.com/watch?v=..."')}</div><div class="full">${select("status", "Workflow status", C.stages, r.status || stage || "queued")}</div></div><fieldset id="performance-fields" ${(r.status || stage) !== "posted" ? "hidden" : ""}><legend>Recorded performance</legend><p>Manual snapshots or auto-fetched via YouTube. 24h views cannot exceed total views.</p><div class="form-grid"><div class="views-fetch-group">${field("views", "Total clip views", r.views || 0, "number", 'min="0" step="1"')}<button type="button" class="button tiny primary fetch-views-btn" data-action="fetch-clip-views" title="Auto-fetch views & likes if YouTube URL is provided">⚡ Fetch Views</button></div>${field("views_24h", "Recorded 24h views", r.views_24h || 0, "number", 'min="0" step="1"')}${field("likes", "Recorded likes", r.likes || 0, "number", 'min="0" step="1"')}${field("geo", "Top audience location", r.geo)}<div class="full">${select("age_group", "Top age group", { "": "Not recorded", "13–17": "13–17", "18–24": "18–24", "25–34": "25–34", "35–44": "35–44", "45+": "45+" }, r.age_group || "")}</div><div class="full yt-live-stats-badge" id="yt-live-stats" hidden></div></div></fieldset>`;
     }
     openDialog(
       `${dialogHead((id ? "Edit " : "Add ") + kind, kind === "account" ? "Channel contacts and notes. Never paste passwords or recovery codes." : "Plan, edit, and schedule clips from long-form content.")}<form id="record-form" data-kind="${kind}" data-id="${id || ""}">${fields}<p class="form-error" role="alert"></p><footer class="dialog-foot">${id ? `<button class="button danger-text" type="button" data-delete="${kind}" data-id="${id}">Delete ${kind}</button>` : "<span></span>"}<div><button class="button" type="button" data-action="close-dialog">Cancel</button><button class="button primary" type="submit">Save ${kind}</button></div></footer></form>`,
@@ -1029,6 +1033,7 @@
     return {
       id: videoId,
       title: item.snippet?.title || "",
+      publishedAt: item.snippet?.publishedAt || "",
       views: Number(item.statistics?.viewCount || 0),
       likes: Number(item.statistics?.likeCount || 0),
       comments: Number(item.statistics?.commentCount || 0),
@@ -1057,7 +1062,7 @@
       const chunk = targets.slice(i, i + chunkSize);
       const ids = chunk.map((t) => t.videoId).join(",");
       const params = new URLSearchParams({
-        part: "statistics",
+        part: "statistics,snippet",
         id: ids,
         key: key,
       });
@@ -1069,23 +1074,40 @@
 
       const statsMap = new Map();
       for (const item of (data.items || [])) {
-        statsMap.set(item.id, Number(item.statistics?.viewCount || 0));
+        statsMap.set(item.id, {
+          views: Number(item.statistics?.viewCount || 0),
+          likes: Number(item.statistics?.likeCount || 0),
+          publishedAt: item.snippet?.publishedAt || "",
+        });
       }
 
       for (const t of chunk) {
         if (statsMap.has(t.videoId)) {
-          const freshViews = statsMap.get(t.videoId);
-          if (freshViews !== t.clip.views) {
+          const stats = statsMap.get(t.videoId);
+          const freshViews = stats.views;
+          const freshLikes = stats.likes;
+          const pubDate = stats.publishedAt ? new Date(stats.publishedAt) : null;
+          const isWithin24h = pubDate && (Date.now() - pubDate.getTime() <= 24 * 60 * 60 * 1000);
+          
+          let views_24h = t.clip.views_24h || 0;
+          if (isWithin24h) {
+            views_24h = freshViews;
+          } else if (!views_24h || views_24h === 0) {
+            views_24h = freshViews;
+          } else {
+            views_24h = Math.min(views_24h, freshViews);
+          }
+
+          if (freshViews !== t.clip.views || freshLikes !== (t.clip.likes || 0) || views_24h !== (t.clip.views_24h || 0)) {
             const status = (t.clip.status !== "posted" && freshViews > 0) ? "posted" : t.clip.status;
-            const views_24h = Math.min(t.clip.views_24h || 0, freshViews);
-            await save("clip", { ...t.clip, views: freshViews, status, views_24h }, t.clip.id);
+            await save("clip", { ...t.clip, views: freshViews, views_24h, likes: freshLikes, status }, t.clip.id);
             updatedCount++;
           }
         }
       }
     }
     refresh();
-    notify(`Synced ${targets.length} YouTube clip(s) (${updatedCount} updated).`);
+    notify(`Synced ${targets.length} YouTube clip(s) (${updatedCount} updated with views & likes).`);
   }
   async function saveQuickLog(form) {
     if (S.busy) return;
@@ -1094,15 +1116,17 @@
     for (const c of S.data.clips) {
       const viewsVal = formData.get(`views_${c.id}`);
       const views24hVal = formData.get(`views_24h_${c.id}`);
+      const likesVal = formData.get(`likes_${c.id}`);
       if (viewsVal !== null && views24hVal !== null) {
         const views = Number(viewsVal) || 0;
         const views_24h = Number(views24hVal) || 0;
-        if (views !== c.views || views_24h !== c.views_24h) {
+        const likes = Number(likesVal) || 0;
+        if (views !== c.views || views_24h !== c.views_24h || likes !== (c.likes || 0)) {
           if (views_24h > views) {
             throw Error(`Clip "${c.title}": 24-hour views cannot exceed total views.`);
           }
           const status = (c.status !== "posted" && views > 0) ? "posted" : c.status;
-          updates.push({ ...c, views, views_24h, status });
+          updates.push({ ...c, views, views_24h, likes, status });
         }
       }
     }
@@ -1414,11 +1438,21 @@
       await busy(b, async () => {
         const info = await fetchYouTubeClip(c.source_url);
         const freshViews = info.views;
+        const freshLikes = info.likes;
+        const pubDate = info.publishedAt ? new Date(info.publishedAt) : null;
+        const isWithin24h = pubDate && (Date.now() - pubDate.getTime() <= 24 * 60 * 60 * 1000);
+        let views_24h = c.views_24h || 0;
+        if (isWithin24h) {
+          views_24h = freshViews;
+        } else if (!views_24h || views_24h === 0) {
+          views_24h = freshViews;
+        } else {
+          views_24h = Math.min(views_24h, freshViews);
+        }
         const status = (c.status !== "posted" && freshViews > 0) ? "posted" : c.status;
-        const views_24h = Math.min(c.views_24h || 0, freshViews);
-        await save("clip", { ...c, views: freshViews, status, views_24h }, c.id);
+        await save("clip", { ...c, views: freshViews, views_24h, likes: freshLikes, status }, c.id);
         refresh();
-        notify(`Updated "${c.title}" to ${compact(freshViews)} views!`);
+        notify(`Updated "${c.title}": ${compact(freshViews)} views, ${compact(freshLikes)} likes!`);
       });
       return;
     }
@@ -1434,9 +1468,12 @@
         if (!dialogForm) return;
         const urlInput = dialogForm.querySelector('input[name="source_url"]');
         const viewsInput = dialogForm.querySelector('input[name="views"]');
+        const views24hInput = dialogForm.querySelector('input[name="views_24h"]');
+        const likesInput = dialogForm.querySelector('input[name="likes"]');
         const titleInput = dialogForm.querySelector('input[name="title"]');
         const statusSelect = dialogForm.querySelector('select[name="status"]');
         const perfFields = $("#performance-fields");
+        const statsBadge = $("#yt-live-stats");
 
         const url = urlInput?.value?.trim();
         if (!url) {
@@ -1446,6 +1483,7 @@
         await busy(b, async () => {
           const info = await fetchYouTubeClip(url);
           if (viewsInput) viewsInput.value = info.views;
+          if (likesInput) likesInput.value = info.likes;
           if (titleInput && !titleInput.value.trim() && info.title) {
             titleInput.value = info.title;
           }
@@ -1453,7 +1491,23 @@
             statusSelect.value = "posted";
             if (perfFields) perfFields.hidden = false;
           }
-          notify(`Fetched ${compact(info.views)} views from YouTube!`);
+
+          const pubDate = info.publishedAt ? new Date(info.publishedAt) : null;
+          const isWithin24h = pubDate && (Date.now() - pubDate.getTime() <= 24 * 60 * 60 * 1000);
+          if (views24hInput) {
+            if (isWithin24h) {
+              views24hInput.value = info.views;
+            } else if (!views24hInput.value || Number(views24hInput.value) === 0) {
+              views24hInput.value = info.views;
+            }
+          }
+
+          if (statsBadge) {
+            statsBadge.hidden = false;
+            statsBadge.innerHTML = `<span>⚡ YouTube Live Stats: <b>${exact(info.views)}</b> views · <b>${exact(info.likes)}</b> likes · <b>${exact(info.comments)}</b> comments${pubDate ? ` · Published ${pubDate.toLocaleDateString()}` : ""}</span>`;
+          }
+
+          notify(`Fetched ${compact(info.views)} views & ${compact(info.likes)} likes from YouTube!`);
         });
       }
       if (action === "clear-yt-key") {

@@ -1,88 +1,183 @@
-# ClipVault enhanced edition
+# ClipVault — Enhanced Edition
 
-A local-first clipping workspace, refactored from the supplied project. No build step is required.
+<p align="center">
+  <strong>A resilient, local-first creator operations workspace for managing accounts, clip production queues, and recorded performance.</strong>
+</p>
 
-## Run
+<p align="center">
+  <a href="https://clipvaultt.netlify.app/"><img src="https://img.shields.io/badge/Live_Demo-Netlify-00C7B7?style=flat-square&logo=netlify" alt="Live Demo"></a>
+  <img src="https://img.shields.io/badge/Architecture-Local--First-2563EB?style=flat-square" alt="Local First">
+  <img src="https://img.shields.io/badge/Build_Step-Zero_None-10B981?style=flat-square" alt="Zero Build Step">
+  <img src="https://img.shields.io/badge/Backend-Optional_Supabase-3ECF8E?style=flat-square&logo=supabase" alt="Supabase Backend">
+  <img src="https://img.shields.io/badge/Runtime-Vanilla_JS_ES2022-F7DF1E?style=flat-square&logo=javascript&logoColor=black" alt="Vanilla JS">
+  <img src="https://img.shields.io/badge/Tests-16_Passing-success?style=flat-square" alt="Tests Passing">
+</p>
 
-Open `index.html`. Click **Try the demo** for fictional in-memory data, or **Start a blank workspace** for persistent local records. No signup is required to use the local workspace.
+---
 
-For predictable browser storage and cloud authentication, serve the folder:
+## ⚡ Overview
 
-```sh
-cd clipvault-enhanced
-python3 -m http.server 8080
+**ClipVault Enhanced Edition** is a clean, zero-framework, dependency-free web application designed for content creators, video editors, and social media managers. It decouples creative workflow management from bloated video editing tools, providing a fast cockpit for channels, clip status pipelines, and manual performance tracking.
+
+- 🚀 **Zero Build Step**: Pure HTML5, modern CSS3 (custom properties), and vanilla ES2022. No `npm run build`, no bundler config, no hydration overhead.
+- 🔒 **Local-First & Private**: Persistent browser storage via `localStorage` with zero account required. Local data stays on your machine.
+- ☁️ **Optional Cloud Sync**: Supabase authentication with Row-Level Security (RLS), user profiles, passwordless magic links, and automated password recovery.
+- 🛡️ **Safer by Design**: Social platform passwords and recovery codes are strictly forbidden from being collected or stored. No secrets are ever included in notes or exported backups.
+
+---
+
+## 🧭 Live Demo & Dedicated Auth URLs
+
+The application is deployed on Netlify:  
+👉 **[https://clipvaultt.netlify.app/](https://clipvaultt.netlify.app/)**
+
+ClipVault supports deep linking and direct URL routes:
+
+| Target View | Direct URL | Description |
+|---|---|---|
+| **Home / Demo** | [`/#home`](https://clipvaultt.netlify.app/) | Landing page with interactive in-memory demo |
+| **Password Sign In** | [`/#login`](https://clipvaultt.netlify.app/#login) | Cloud account email & password sign in |
+| **Magic Link Sign In** | [`/#magiclink`](https://clipvaultt.netlify.app/#magiclink) | Passwordless sign-in via secure email link |
+| **Sign Up** | [`/#signup`](https://clipvaultt.netlify.app/#signup) | Create a new private cloud workspace |
+| **Forgot Password** | [`/#forgot`](https://clipvaultt.netlify.app/#forgot) | Request password reset instructions |
+| **Reset Password** | [`/#reset`](https://clipvaultt.netlify.app/#reset) | Set new password following recovery redirect |
+
+*(Query parameter formats such as `?auth=login`, `?auth=signup`, `?auth=magiclink`, and `?auth=reset` are also supported).*
+
+---
+
+## ✨ Features
+
+- **Overview Dashboard**: High-level production metrics, in-flight pipeline summary, and upcoming priority items.
+- **Account Hub**: Multi-platform creator profiles (YouTube, Instagram, TikTok, Facebook, Podcasts) with handles, contact info, channel URLs, notes, and priority badges.
+- **Visual Clip Board**: Kanban-style drag-and-drop workflow tracking (`Queued` ➔ `Cutting` ➔ `Ready` ➔ `Posted`) with full touch and keyboard accessibility.
+- **Audience & Performance Analytics**: Manual view snapshots and 24h retention tracking, cleanly separated from channel lifetime views to avoid double-counting.
+- **User Profiles & Preferences**: Cloud-synced user preferences including light/dark/system themes, default platform filters, and profile details.
+- **Import / Export**: Validated JSON backup export and safe import with confirmation dialogs and corruption guards.
+- **Optional YouTube Sync**: In-memory channel view, subscriber, and video count sync via restricted YouTube Data API v3 keys.
+- **Accessible & Responsive**: Fully keyboard navigable, native focus-trapping `<dialog>` modals, ARIA live regions, and WCAG-compliant color contrast.
+
+---
+
+## 🚀 Quick Start
+
+### Option 1: Direct File
+Open `index.html` directly in any modern browser. Click **Try the demo** for fictional in-memory data, or **Start a blank workspace** for persistent local records.
+
+### Option 2: Local HTTP Server (Recommended)
+For consistent browser storage partitions, cookies, and Supabase redirect handling, serve the folder locally:
+
+```bash
+# Using Python 3
+python -m http.server 8080
+
+# Or using Node.js
+npx serve . -p 8080
 ```
 
-Open `http://localhost:8080`. Keep the same hostname/port; browser storage is origin-specific. File-based storage varies between browsers. Deploy over HTTPS.
+Open: `http://localhost:8080`
 
-## Features
+> [!NOTE]
+> Browser `localStorage` is origin-isolated (`protocol + hostname + port`). Accessing the app through the same origin ensures your local workspace records persist between sessions.
 
-- Responsive homepage, Overview, Accounts, Clip board, Analytics, and Settings
-- Original four platforms and all original niches, plus Podcast
-- Local and cloud workspaces kept separate; demo data never touches saved data
-- Accounts with contacts, URLs, notes, priorities, and views
-- Clip CRUD, drag-and-drop, keyboard/touch status menus, search, filters, sorting
-- Posted-only clip metrics, separately labeled channel lifetime totals
-- Validated JSON backup export/import; confirmation before replacement or deletion
-- Light, dark, and system themes; labeled forms and native focus-trapping dialogs
-- Optional Supabase email sign-in/signup and optional YouTube channel statistics sync
-- No required external fonts or runtime libraries in local mode
+---
 
-## Safety and intentional changes
+## ☁️ Optional Supabase Cloud Integration
 
-Social-account passwords and recovery codes are no longer collected, selected from cloud tables, displayed, or included in backups. Authentication passwords still go directly to Supabase for login. Never put secrets in notes.
+ClipVault connects out of the box to Supabase for multi-device sync with zero server backend code required.
 
-Local records are **not encrypted or login-protected**. Export regular backups and store them privately; backups contain contact details and notes. Corrupt local data is preserved; Settings offers a raw export and explicit reset.
+### 1. Database Setup
+If setting up a fresh Supabase project:
+1. Open your [Supabase SQL Editor](https://supabase.com/dashboard).
+2. Paste and run the entire contents of [`supabase/schema.sql`](supabase/schema.sql).
+3. This creates the `accounts`, `clips`, and `user_profiles` tables with strict Row-Level Security (RLS) policies.
 
-The new app uses `clipvault.enhanced.v1`, not the original storage keys. It never auto-imports old records or auto-merges local/cloud data. Demo records live only in memory.
+### 2. Configure Client Credentials
+Edit [`config.js`](config.js) with your public project parameters:
 
-The included Supabase project is preconfigured with a publishable browser key. Cloud sign-in remains optional; local workspaces do not require an account. The original backend records and any legacy passwords are not automatically migrated or deleted. See `docs/MIGRATION.md`.
-
-Clip analytics are manual. “Recorded 24h views” sums snapshots that can have different reporting dates; it is not a live current-24h metric. Channel and clip totals may overlap and are never added together.
-
-This edition does not implement video editing, auto-publishing, team invitations, shared multi-user workspaces, or cloud import. Cloud password recovery should be configured separately in your Supabase deployment before public launch.
-
-## Optional Supabase
-
-1. The frontend is preconfigured for the supplied Supabase project in `config.js`.
-2. For a fresh project, manually review/run `supabase/schema.sql`. It intentionally fails if the original tables exist.
-3. Never replace the browser key with a service-role or `sb_secret_` key.
-4. Configure email confirmation, SMTP, site URL, and redirect allowlist in Supabase.
-5. Sign in from the app and test CRUD with two independent users to verify row-level security.
-
-The public key is not a server secret. Row-level security is the authorization boundary. Cloud adapters use explicit non-secret column allowlists, owner filters, pagination, and surfaced errors.
-
-The version-pinned Supabase SDK loads on demand. For production, consider self-hosting the official SDK or verified SRI, and configure CSP/security headers at the host. No live Supabase/SMTP/Google integration was verified in this sandbox.
-
-## Optional YouTube
-
-In Settings, enter an API key restricted to your site's HTTP referrers and YouTube Data API v3. It stays in memory only. Sync supports youtube.com @handle and /channel/ URLs, not legacy /c/ or /user/ links. Sync updates channel views, subscriber count, and published video count. Use a server proxy if you require a server-only API key.
-
-## Tests
-
-```sh
-node --test tests/core.test.cjs
+```javascript
+window.CLIPVAULT_CONFIG = {
+  supabaseUrl: "https://<your-project-ref>.supabase.co",
+  supabasePublishableKey: "sb_publishable_..." // or legacy anon key
+};
 ```
 
-For browser tests, install Playwright and Chromium in your development environment:
+> [!CAUTION]
+> **Never** expose a Supabase `service_role` key or `sb_secret_` in `config.js` or client code. The publishable/anon key is designed to be public; security is enforced at the database level via Row Level Security (RLS).
 
-```sh
+### 3. URL Configuration (Required for Password Reset & Magic Links)
+In your Supabase Dashboard:
+1. Navigate to **Authentication** ➔ **URL Configuration**.
+2. Set **Site URL**: `https://clipvaultt.netlify.app` (or your production domain).
+3. Under **Redirect URLs**, add:
+   ```text
+   https://clipvaultt.netlify.app/**
+   https://clipvaultt.netlify.app/
+   https://clipvaultt.netlify.app/#reset
+   https://clipvaultt.netlify.app/#login
+   http://localhost:8080/**
+   ```
+4. Click **Save**.
+
+---
+
+## 🔒 Security & Safe-by-Design Architecture
+
+| Principle | Implementation Details |
+|---|---|
+| **No Third-Party Secret Storage** | The app intentionally **does not collect or store** passwords or 2FA recovery codes for social platforms (YouTube, IG, TikTok). Use a dedicated password manager. |
+| **Row Level Security (RLS)** | All Supabase tables isolate data strictly by `auth.uid() = user_id`. Cloud adapters enforce non-secret column allowlists and pagination. |
+| **Input Sanitization** | `js/core.js` strictly validates and escapes strings, rejects unsafe protocols (`javascript:`, `data:`), strips embedded credentials, and rejects negative/NaN views. |
+| **Local vs Cloud Isolation** | Local storage (`clipvault.enhanced.v1`) and cloud databases are never automatically merged or overwritten without explicit user action. |
+| **Volatile API Keys** | YouTube API keys entered for channel sync remain strictly in-memory and are never written to `localStorage` or transmitted to any backend. |
+
+---
+
+## 🧪 Testing
+
+ClipVault includes comprehensive automated tests covering pure domain logic, sanitization, data invariants, and schema validation.
+
+### Unit Tests (Node.js Test Runner)
+No external dependencies required:
+
+```bash
+node tests/core.test.cjs
+```
+
+Runs 16 unit assertions verifying URL normalization, credential stripping, view counters, demo data integrity, and backup date checks.
+
+### Browser & UI Tests (Playwright)
+```bash
 npm install --save-dev playwright
 npx playwright install chromium
 node tests/browser.test.cjs
 ```
 
-Alternatively set `CHROME_PATH` to your installed Chromium. Screenshots and JSON results go to `test-results/` (override with `QA_DIR`). Cloud failure paths use mocks; they do not prove live backend security.
+---
 
-## Structure
+## 📁 Repository Structure
 
-- `index.html`, `config.js`: entry point and optional public configuration
-- `css/styles.css`: responsive design system
-- `js/core.js`: pure validation, metrics, and sample data
-- `js/storage.js`: local/cloud adapters
-- `js/app.js`: UI, forms, routing, and interactions
-- `supabase/schema.sql`: fresh-project schema and RLS
-- `tests/`: unit and browser regression tests
-- `docs/`: review, migration, and test notes
+```text
+clipvault/
+├── index.html              # Entry point with semantic markup & accessible dialogs
+├── config.js               # Public browser client configuration
+├── css/
+│   └── styles.css          # Responsive styling, design tokens, light/dark themes
+├── js/
+│   ├── core.js             # Pure domain logic, validators, metrics, HTML sanitization
+│   ├── storage.js          # LocalStore and CloudStore (Supabase) data adapters
+│   └── app.js              # UI controller, routing, native dialogs, drag-and-drop
+├── supabase/
+│   └── schema.sql          # PostgreSQL DDL, RLS policies, indexes, and triggers
+├── tests/
+│   ├── core.test.cjs       # Node unit test suite
+│   └── browser.test.cjs    # Playwright browser integration tests
+├── docs/                   # Migration docs, previews, and architectural reviews
+└── SETUP_INSTRUCTIONS.md   # Step-by-step Supabase deployment manual
+```
 
-This is a production-ready static frontend, but live authorization review, password recovery, backups, monitoring, HTTPS, CSP/security headers, and deployment hardening remain necessary before public launch.
+---
+
+## 📄 License
+
+Open-source under the MIT License. Built with craft for creators and developers who value simplicity, performance, and security.

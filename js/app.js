@@ -14,6 +14,9 @@
     authMessage: "",
     authMessageType: "error",
     page: "overview",
+    boardView: "board",
+    calYear: new Date().getFullYear(),
+    calMonth: new Date().getMonth(),
     data: empty(),
     mode: "local",
     sample: false,
@@ -209,8 +212,17 @@
   function nav(p) {
     return `<button class="nav-item ${S.page === p ? "active" : ""}" data-page="${p}" ${S.page === p ? 'aria-current="page"' : ""}>${icon(p)}${names[p]}${p === "board" ? `<span class="nav-count">${C.metrics(S.data).progress}</span>` : ""}</button>`;
   }
+  const statusIndicator = () => {
+    if (S.sample) {
+      return `<div class="status-pill demo"><span class="status-dot"></span>Demo Workspace</div>`;
+    }
+    if (S.mode === "cloud") {
+      return `<div class="status-pill cloud"><span class="status-dot"></span>Cloud Synced</div>`;
+    }
+    return `<div class="status-pill local"><span class="status-dot"></span>Local Workspace</div>`;
+  };
   function shell() {
-    return `<div class="app"><button class="scrim" data-action="close-nav" aria-label="Close navigation"></button><aside class="sidebar">${brand()}<div class="workspace"><b>${S.sample ? "Demo workspace" : S.mode === "cloud" ? "Cloud workspace" : "Local workspace"}</b><small>${S.sample ? "In memory only" : S.mode === "cloud" ? "Signed in" : "Saved in this browser"}</small></div><span class="nav-label">WORKSPACE</span><nav aria-label="Workspace">${["overview", "accounts", "board", "analytics"].map(nav).join("")}</nav><div class="sidebar-bottom">${nav("settings")}<p>No passwords here.<br>Just your creative workflow.</p><button class="nav-item" data-action="exit">${icon("arrow")}${S.mode === "cloud" ? "Sign out" : "Back to home"}</button></div></aside><div class="app-body"><header class="app-top"><div>${btn(icon("menu"), "toggle-nav")}<span>Workspace <span>/</span> <b>${names[S.page]}</b></span></div>${badge(S.sample ? "Demo · in memory" : S.mode === "cloud" ? "Cloud · signed in" : "Local · this browser")}</header><main id="content" tabindex="-1"><div class="page-heading"><div><span class="eyebrow">YOUR CREATIVE WORKSPACE</span><h1>${names[S.page]}</h1><p>${{ overview: "A clear view of what’s moving. And what comes next.", accounts: "Your channels, organized. No passwords required.", board: "Less chasing updates. More moving things forward.", analytics: "Recorded performance, with the right context.", settings: "Your workspace. Your data. Your preferences." }[S.page]}</p></div>${["overview", "board", "accounts"].includes(S.page) ? btn(icon("plus") + (S.page === "accounts" ? " Add account" : " New clip"), S.page === "accounts" ? "account" : "clip", true) : ""}</div>${S.sample ? `<div class="notice blue"><span><b>Demo workspace.</b> Fictional accounts and clips, stored in memory only.</span>${btn("Start my workspace", "local")}</div>` : ""}<div id="page-content">${pageContent()}</div></main><footer>${S.sample ? "Demo changes disappear when you leave." : S.mode === "cloud" ? "Cloud access is governed by your Supabase policies." : "Local data stays in this browser. Keep a backup."}</footer></div></div>`;
+    return `<div class="app"><button class="scrim" data-action="close-nav" aria-label="Close navigation"></button><aside class="sidebar">${brand()}<div class="workspace"><div class="workspace-pill"><span class="workspace-dot ${S.mode === "cloud" ? "cloud" : S.sample ? "demo" : "local"}"></span><b>${S.sample ? "Demo Workspace" : S.mode === "cloud" ? "Cloud Workspace" : "Local Workspace"}</b></div><small>${S.sample ? "In memory only" : S.mode === "cloud" ? (S.user?.email || "Connected") : "Saved in browser"}</small></div><span class="nav-label">WORKSPACE</span><nav aria-label="Workspace">${["overview", "accounts", "board", "analytics"].map(nav).join("")}</nav><div class="sidebar-bottom">${nav("settings")}<button class="nav-item" data-action="exit">${icon("arrow")}${S.mode === "cloud" ? "Sign out" : "Back to home"}</button></div></aside><div class="app-body"><header class="app-top"><div>${btn(icon("menu"), "toggle-nav")}<span>Workspace <span>/</span> <b>${names[S.page]}</b></span></div>${statusIndicator()}</header><main id="content" tabindex="-1"><div class="page-heading"><div><span class="eyebrow">YOUR CREATIVE WORKSPACE</span><h1>${names[S.page]}</h1><p>${{ overview: "A clear view of what’s moving. And what comes next.", accounts: "Your channels, organized. No passwords required.", board: "Less chasing updates. More moving things forward.", analytics: "Recorded performance, with the right context.", settings: "Your workspace. Your data. Your preferences." }[S.page]}</p></div>${["overview", "board", "accounts"].includes(S.page) ? btn(icon("plus") + (S.page === "accounts" ? " Add account" : " New clip"), S.page === "accounts" ? "account" : "clip", true) : ""}</div>${S.sample ? `<div class="notice blue"><span><b>Demo workspace.</b> Fictional accounts and clips, stored in memory only.</span>${btn("Start my workspace", "local")}</div>` : ""}<div id="page-content">${pageContent()}</div></main><footer>${S.sample ? "Demo changes disappear when you leave." : S.mode === "cloud" ? "Cloud access is governed by your Supabase policies." : "Local data stays in this browser. Keep a backup."}</footer></div></div>`;
   }
   function pageContent() {
     return { overview, accounts, board, analytics, settings }[S.page]();
@@ -269,7 +281,8 @@
     }</section>`;
   }
   function filters() {
-    return `<div class="filters"><label class="search">${icon("search")}<input type="search" id="search" aria-label="Search workspace records" placeholder="Search ${S.page === "accounts" ? "accounts" : "clips"}…" value="${E(S.query)}"></label><div><select id="filter-platform" aria-label="Platform filter"><option value="all">All platforms</option>${Object.entries(
+    const isBoard = S.page === "board";
+    return `<div class="filters">${isBoard ? `<div class="board-toggle" role="group" aria-label="Layout view"><button type="button" class="toggle-btn ${S.boardView !== "calendar" ? "active" : ""}" data-board-view="board">${icon("board")} Board</button><button type="button" class="toggle-btn ${S.boardView === "calendar" ? "active" : ""}" data-board-view="calendar"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Calendar</button></div>` : ""}<label class="search">${icon("search")}<input type="search" id="search" aria-label="Search workspace records" placeholder="Search ${S.page === "accounts" ? "accounts" : "clips"}…" value="${E(S.query)}"></label><div><select id="filter-platform" aria-label="Platform filter"><option value="all">All platforms</option>${Object.entries(
       C.platforms,
     )
       .map(
@@ -322,8 +335,11 @@
     const list = filtered("accounts");
     return `<p class="result-count">${list.length} of ${S.data.accounts.length} accounts</p>${list.length ? `<div class="account-grid">${list.map((a) => `<article class="account-card"><div class="account-top"><span class="avatar ${a.platform}">${platformMark(a.platform)}</span>${badge(a.status, a.status === "active" ? "green" : "")}</div><h2>${E(a.name)}</h2><p>${E(a.handle || C.platforms[a.platform])}</p><div class="tags">${badge(a.niche)}${badge(a.priority + " priority", a.priority === "high" ? "orange" : "")}</div><div class="account-views"><span>Channel views</span><b>${compact(a.views)}</b></div>${a.platform === "youtube" && (a.subscribers || a.videos) ? `<div class="account-youtube"><span><b>${compact(a.subscribers)}</b> subscribers</span><span><b>${compact(a.videos)}</b> videos</span></div>` : ""}<div class="account-link">${link(a.url, "Open channel")}</div><details><summary>Contact & notes</summary><p>${E([a.email, a.phone, a.notes || "No notes added."].filter(Boolean).join("\n"))}</p></details><div class="card-foot"><small>Added ${date(a.created_at)}</small><button class="text-button" data-edit-account="${a.id}">Edit account</button></div></article>`).join("")}</div>` : none("No matching accounts", "Try a different search or add a new channel.", "account", "Add account")}`;
   }
+  function boardContent() {
+    return S.boardView === "calendar" ? calendarView() : boardResults();
+  }
   function board() {
-    return filters() + '<div id="results">' + boardResults() + "</div>";
+    return filters() + '<div id="results">' + boardContent() + "</div>";
   }
   function clipCard(c) {
     const a = S.data.accounts.find((a) => a.id === c.account_id);
@@ -355,6 +371,75 @@
       )
       .join("")}</div>`;
   }
+  function calendarView() {
+    const year = S.calYear;
+    const month = S.calMonth;
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    const monthTitle = `${monthNames[month]} ${year}`;
+
+    const list = filtered("clips");
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+    const todayClips = list.filter((c) => (c.created_at || "").slice(0, 10) === todayStr);
+    const todayReady = todayClips.filter((c) => c.status === "ready");
+
+    let dropsAlertHtml = "";
+    if (todayReady.length > 0) {
+      dropsAlertHtml = `<div class="todays-drops-banner"><div class="drops-badge">🚀 READY TO POST TODAY</div><div class="drops-content"><strong>${todayReady.length} clip${todayReady.length > 1 ? "s" : ""} ready for publishing</strong><p>Manual publishing maintains maximum algorithmic reach on new creator accounts.</p><div class="drops-list">${todayReady.map((c) => {
+        const a = S.data.accounts.find((acc) => acc.id === c.account_id);
+        return `<div class="drop-item"><span class="platform-text ${a?.platform || ""}">${a ? platformMark(a.platform) : ""}${E(a ? C.platforms[a.platform] : "Shorts")}</span><span class="drop-title" title="${E(c.title)}">${E(c.title)}</span><button type="button" class="button tiny" data-copy-title="${E(c.title)}">📋 Copy Hook</button>${c.source_url ? `<a href="${E(C.url(c.source_url))}" target="_blank" rel="noopener noreferrer" class="button tiny">Open Source</a>` : ""}<button type="button" class="button primary tiny" data-quick-post="${c.id}">✅ Mark Posted</button></div>`;
+      }).join("")}</div></div></div>`;
+    }
+
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+    let cellsHtml = "";
+
+    // Prev month days
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const d = daysInPrevMonth - i;
+      const prevMonth = month === 0 ? 11 : month - 1;
+      const prevYear = month === 0 ? year - 1 : year;
+      const dateKey = `${prevYear}-${String(prevMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const dayClips = list.filter((c) => (c.created_at || "").slice(0, 10) === dateKey);
+
+      cellsHtml += `<div class="cal-day other-month" data-cal-date="${dateKey}"><div class="cal-day-head"><span class="cal-day-num">${d}</span></div><div class="cal-clips-list">${dayClips.map((c) => renderCalClip(c)).join("")}</div></div>`;
+    }
+
+    // Current month days
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const isToday = dateKey === todayStr;
+      const dayClips = list.filter((c) => (c.created_at || "").slice(0, 10) === dateKey);
+
+      cellsHtml += `<div class="cal-day ${isToday ? "is-today" : ""}" data-cal-date="${dateKey}"><div class="cal-day-head"><span class="cal-day-num">${day}${isToday ? ' <small class="today-tag">TODAY</small>' : ""}</span><button type="button" class="cal-add-btn" data-add-clip-date="${dateKey}" title="Add clip on this date" aria-label="Add clip on ${dateKey}">+</button></div><div class="cal-clips-list">${dayClips.map((c) => renderCalClip(c)).join("")}</div></div>`;
+    }
+
+    // Next month days to fill grid
+    const totalCellsSoFar = firstDayIndex + daysInMonth;
+    const totalGridCells = totalCellsSoFar > 35 ? 42 : 35;
+    const remaining = totalGridCells - totalCellsSoFar;
+    for (let day = 1; day <= remaining; day++) {
+      const nextMonth = month === 11 ? 0 : month + 1;
+      const nextYear = month === 11 ? year + 1 : year;
+      const dateKey = `${nextYear}-${String(nextMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const dayClips = list.filter((c) => (c.created_at || "").slice(0, 10) === dateKey);
+
+      cellsHtml += `<div class="cal-day other-month" data-cal-date="${dateKey}"><div class="cal-day-head"><span class="cal-day-num">${day}</span></div><div class="cal-clips-list">${dayClips.map((c) => renderCalClip(c)).join("")}</div></div>`;
+    }
+
+    return `<div class="calendar-wrapper"><div class="calendar-nav-bar"><div class="cal-title-group"><h2>${monthTitle}</h2><div class="cal-btn-group"><button type="button" class="button" data-cal-nav="prev" aria-label="Previous month">◀</button><button type="button" class="button" data-cal-nav="today">Today</button><button type="button" class="button" data-cal-nav="next" aria-label="Next month">▶</button></div></div><div class="cal-meta"><span><i class="dot ready"></i> ${list.filter((c) => c.status === "ready").length} Ready</span><span><i class="dot cutting"></i> ${list.filter((c) => c.status === "cutting").length} Cutting</span><span><i class="dot queued"></i> ${list.filter((c) => c.status === "queued").length} Queued</span><span><i class="dot posted"></i> ${list.filter((c) => c.status === "posted").length} Posted</span></div></div>${dropsAlertHtml}<div class="calendar-grid"><div class="cal-weekday">Sun</div><div class="cal-weekday">Mon</div><div class="cal-weekday">Tue</div><div class="cal-weekday">Wed</div><div class="cal-weekday">Thu</div><div class="cal-weekday">Fri</div><div class="cal-weekday">Sat</div>${cellsHtml}</div></div>`;
+  }
+  function renderCalClip(c) {
+    const a = S.data.accounts.find((acc) => acc.id === c.account_id);
+    return `<button type="button" class="cal-clip-item status-${c.status}" data-edit-clip="${c.id}" title="${E(c.title)} (${C.stages[c.status]})"><i class="dot ${c.status}"></i>${a ? platformMark(a.platform) : ""}<span class="cal-clip-name">${E(c.title)}</span></button>`;
+  }
   function analytics() {
     const m = C.metrics(S.data),
       posted = S.data.clips
@@ -371,7 +456,7 @@
     return `<div class="notice"><p><b>Manual records, not live analytics.</b> Channel totals and posted-clip views stay separate because they may overlap.</p></div><section class="stats">${stat("Posted-clip views", m.clipViews, m.posted + " published clips", true)}${stat("Recorded 24h views", m.recorded24h, "Entered snapshots; reporting dates may differ")}${stat("Channel views", m.channelViews, "Separate lifetime totals")}${stat("In production", m.progress, "Excluded from performance totals")}</section><div class="analytics-grid"><section class="panel"><div class="panel-title"><div><h2>Posted-clip performance</h2><p>Ranked by recorded views.</p></div></div>${posted.length ? `<div class="table-scroll"><table><thead><tr><th>Clip / channel</th><th>Total views</th><th>Recorded 24h</th></tr></thead><tbody>${posted.map((c) => `<tr><td><button class="text-button" data-edit-clip="${c.id}">${E(c.title)}</button><small>${E(S.data.accounts.find((a) => a.id === c.account_id)?.name || "Unlinked")}</small></td><td>${exact(c.views)}</td><td>${exact(c.views_24h)}</td></tr>`).join("")}</tbody></table></div>` : none("Your results start here", "Mark a clip as posted and enter its performance.", "clip", "Add a posted clip")}</section><section class="panel"><div class="panel-title"><div><h2>By platform</h2><p>Posted-clip views only.</p></div></div><div class="breakdown">${[...Object.entries(C.platforms), ["unlinked", "Unlinked"]].map(([k, v]) => `<div><span>${v}</span><b>${compact(posted.filter((c) => (S.data.accounts.find((a) => a.id === c.account_id)?.platform || "unlinked") === k).reduce((s, c) => s + c.views, 0))}</b></div>`).join("")}</div><div class="audience"><h3>Recorded audience labels</h3><p>Top location <b>${E(top(geo))}</b></p><p>Top age group <b>${E(top(age))}</b></p><small>Weighted by each clip’s total views. Not a demographic distribution.</small></div></section></div>`;
   }
   function settings() {
-    return `<div class="settings-grid"><section class="panel settings-panel"><h2>Data & backups</h2><p>${S.sample ? "Demo data is in memory only." : S.mode === "cloud" ? "Cloud data belongs to your authenticated user." : "Local data is stored in this browser and is not encrypted. Clearing site data deletes it."}</p><div class="actions">${btn("Export JSON backup", "export")}${!S.sample && S.mode === "local" ? btn("Import JSON backup", "import") : ""}</div><input type="file" id="backup-file" accept=".json,application/json" hidden><small>Backups include contacts and notes. Store them privately. Import replaces local data only after validation and confirmation.</small>${!S.sample && S.mode === "local" ? `<hr><h3>Reset local workspace</h3><p>Export a backup first. Cloud records and the old version’s storage are not affected.</p><div class="actions">${btn("Reset local data", "reset-local")}${btn("Export raw local data", "raw")}</div>` : ""}</section><section class="panel settings-panel"><h2>Appearance</h2><label class="field">Color theme<select id="theme">${["system", "light", "dark"].map((t) => `<option value="${t}" ${document.documentElement.dataset.theme === t ? "selected" : ""}>${t[0].toUpperCase() + t.slice(1)}</option>`).join("")}</select></label><hr><h2>Optional cloud workspace</h2><p>${S.mode === "cloud" ? "Signed in as " + E(S.user?.email) : "Configure your own Supabase project in config.js. Local and cloud workspaces are never automatically merged."}</p>${btn(S.mode === "cloud" ? "Sign out" : "Cloud sign-in", S.mode === "cloud" ? "exit" : "login")}</section><section class="panel settings-panel"><h2>YouTube channel stats</h2><p>Use an API key restricted to your HTTP referrers and YouTube Data API v3. The key stays in memory only.</p><form id="youtube-form">${field("key", "Restricted YouTube API key", ytKey, "password", 'autocomplete="off"')}<button class="button" type="submit">Sync YouTube channels</button><p class="form-error" role="alert"></p></form><small>Updates channel view totals, not clip analytics. Use an @handle or /channel/ URL. No subscriber/video-count display in this edition.</small></section><section class="panel settings-panel"><h2>Safer by design</h2><ul><li>No social-account passwords or recovery codes.</li><li>Only validated http(s) links.</li><li>Save failures keep your form open.</li><li>Cloud record ownership enforced by database policies.</li></ul><p>This is not a password vault. Old credentials in your original database are not deleted by this edition.</p></section></div>`;
+    return `<div class="settings-grid"><section class="panel settings-panel"><h2>Data & backups</h2><p>${S.sample ? "Demo data is in memory only." : S.mode === "cloud" ? "Cloud data belongs to your authenticated user." : "Local data is stored in this browser and is not encrypted. Clearing site data deletes it."}</p><div class="actions">${btn("Export JSON backup", "export")}${!S.sample && S.mode === "local" ? btn("Import JSON backup", "import") : ""}</div><input type="file" id="backup-file" accept=".json,application/json" hidden><small>Backups include contacts and notes. Store them privately. Import replaces local data only after validation and confirmation.</small>${!S.sample && S.mode === "local" ? `<hr><h3>Reset local workspace</h3><p>Export a backup first. Cloud records and the old version’s storage are not affected.</p><div class="actions">${btn("Reset local data", "reset-local")}${btn("Export raw local data", "raw")}</div>` : ""}</section><section class="panel settings-panel"><h2>Appearance</h2><label class="field">Color theme<select id="theme">${["system", "light", "dark"].map((t) => `<option value="${t}" ${document.documentElement.dataset.theme === t ? "selected" : ""}>${t[0].toUpperCase() + t.slice(1)}</option>`).join("")}</select></label><hr><h2>Optional cloud workspace</h2><p>${S.mode === "cloud" ? "Signed in as " + E(S.user?.email) : "Configure your own Supabase project in config.js. Local and cloud workspaces are never automatically merged."}</p>${btn(S.mode === "cloud" ? "Sign out" : "Cloud sign-in", S.mode === "cloud" ? "exit" : "login")}</section>${S.mode === "cloud" ? `<section class="panel settings-panel"><h2>Creator Profile</h2><p>Your cloud identity across your workspaces.</p><div class="field"><label>Display name<input type="text" id="display_name" value="${E(S.profile?.display_name || "")}" placeholder="Creator or Channel Name"></label></div><div class="field"><label>Bio / Production role<input type="text" id="bio" value="${E(S.profile?.bio || "")}" placeholder="e.g. Lead Editor, Clipper, Creator"></label></div><div class="actions"><button class="button primary" id="save-profile-btn" type="button">Save Profile</button></div></section>` : ""}<section class="panel settings-panel"><h2>YouTube channel stats</h2><p>Use an API key restricted to your HTTP referrers and YouTube Data API v3. The key stays in memory only.</p><form id="youtube-form">${field("key", "Restricted YouTube API key", ytKey, "password", 'autocomplete="off"')}<button class="button" type="submit">Sync YouTube channels</button><p class="form-error" role="alert"></p></form><small>Updates channel view totals, not clip analytics. Use an @handle or /channel/ URL. No subscriber/video-count display in this edition.</small></section><section class="panel settings-panel"><h2>Security & Storage</h2><ul><li>Database access is enforced by strict PostgreSQL Row-Level Security (RLS).</li><li>All network traffic is encrypted via HTTPS with publishable key isolation.</li><li>Local and cloud storage layers remain completely segregated.</li><li>Third-party social credentials are never stored or requested.</li></ul><p>Your workspace is architected for clean, distraction-free creator operations.</p></section></div>`;
   }
   function auth() {
     const mode = S.authMode || "signin";
@@ -511,7 +596,7 @@
   function dialogHead(title, description) {
     return `<header class="dialog-head"><div><span class="eyebrow">CLIPVAULT WORKSPACE</span><h2 id="dialog-title">${E(title)}</h2></div><button class="icon-button" type="button" data-action="close-dialog" aria-label="Close dialog">${icon("close")}</button></header><p class="dialog-description">${E(description)}</p>`;
   }
-  function edit(kind, id, stage) {
+  function edit(kind, id, stage, targetDate) {
     if (!S.loaded) {
       notify("Load a workspace before adding records.", true);
       return;
@@ -523,10 +608,12 @@
     let fields;
     if (kind === "account")
       fields = `<div class="form-grid">${field("name", "Account name *", r.name, "text", 'required maxlength="100" autofocus')}${select("platform", "Platform", C.platforms, r.platform || "youtube")}<div class="full">${field("url", "Channel URL *", r.url, "text", 'required inputmode="url" placeholder="https://youtube.com/@channel"')}</div>${field("handle", "Handle / username", r.handle, "text", 'maxlength="100"')}${select("niche", "Content niche", Object.fromEntries(C.niches.map((k) => [k, k])), r.niche || "other")}${select("priority", "Priority", { high: "High", medium: "Medium", low: "Low" }, r.priority || "medium")}${select("status", "Account status", { active: "Active", paused: "Paused", review: "Review" }, r.status || "active")}${field("views", "Recorded channel views", r.views || 0, "number", 'min="0" step="1"')}${field("subscribers", "YouTube subscribers", r.subscribers || 0, "number", 'min="0" step="1"')}${field("videos", "Published videos", r.videos || 0, "number", 'min="0" step="1"')}${field("email", "Contact email", r.email, "email")}${field("phone", "Contact phone", r.phone, "tel")}<label class="field full">Content notes<textarea name="notes" rows="3" maxlength="2000">${E(r.notes || "")}</textarea></label></div>`;
-    else
-      fields = `<div class="form-grid"><div class="full">${field("title", "Clip title *", r.title, "text", 'required maxlength="180" autofocus')}</div>${select("account_id", "From account", { "": "Unlinked", ...Object.fromEntries(S.data.accounts.map((a) => [a.id, a.name])) }, r.account_id || "")}${select("priority", "Priority", { high: "High", medium: "Medium", low: "Low" }, r.priority || "medium")}<div class="full">${field("source_url", "Source video URL", r.source_url, "text", 'inputmode="url"')}</div><div class="full">${select("status", "Workflow status", C.stages, r.status || stage || "queued")}</div></div><fieldset id="performance-fields" ${(r.status || stage) !== "posted" ? "hidden" : ""}><legend>Recorded performance</legend><p>Manual snapshots, not live data. 24h views cannot exceed total views.</p><div class="form-grid">${field("views", "Total clip views", r.views || 0, "number", 'min="0" step="1"')}${field("views_24h", "Recorded 24h views", r.views_24h || 0, "number", 'min="0" step="1"')}${field("geo", "Top audience location", r.geo)}${select("age_group", "Top age group", { "": "Not recorded", "13–17": "13–17", "18–24": "18–24", "25–34": "25–34", "35–44": "35–44", "45+": "45+" }, r.age_group || "")}</div></fieldset>`;
+    else {
+      const defaultDate = targetDate || (r.created_at ? r.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10));
+      fields = `<div class="form-grid"><div class="full">${field("title", "Clip title / hook *", r.title, "text", 'required maxlength="180" autofocus')}</div>${select("account_id", "From channel/account", { "": "Unlinked", ...Object.fromEntries(S.data.accounts.map((a) => [a.id, a.name])) }, r.account_id || "")}${field("target_date", "Target publish date", defaultDate, "date")}${select("priority", "Priority", { high: "High", medium: "Medium", low: "Low" }, r.priority || "medium")}<div class="full">${field("source_url", "Source video URL (for long-form clipping)", r.source_url, "text", 'inputmode="url" placeholder="https://youtube.com/watch?v=..."')}</div><div class="full">${select("status", "Workflow status", C.stages, r.status || stage || "queued")}</div></div><fieldset id="performance-fields" ${(r.status || stage) !== "posted" ? "hidden" : ""}><legend>Recorded performance</legend><p>Manual snapshots, not live data. 24h views cannot exceed total views.</p><div class="form-grid">${field("views", "Total clip views", r.views || 0, "number", 'min="0" step="1"')}${field("views_24h", "Recorded 24h views", r.views_24h || 0, "number", 'min="0" step="1"')}${field("geo", "Top audience location", r.geo)}${select("age_group", "Top age group", { "": "Not recorded", "13–17": "13–17", "18–24": "18–24", "25–34": "25–34", "35–44": "35–44", "45+": "45+" }, r.age_group || "")}</div></fieldset>`;
+    }
     openDialog(
-      `${dialogHead((id ? "Edit " : "Add ") + kind, kind === "account" ? "Channel contacts and notes. Never paste passwords or recovery codes." : "Give your next idea a home. Add performance after publishing.")}<form id="record-form" data-kind="${kind}" data-id="${id || ""}">${fields}<p class="form-error" role="alert"></p><footer class="dialog-foot">${id ? `<button class="button danger-text" type="button" data-delete="${kind}" data-id="${id}">Delete ${kind}</button>` : "<span></span>"}<div><button class="button" type="button" data-action="close-dialog">Cancel</button><button class="button primary" type="submit">Save ${kind}</button></div></footer></form>`,
+      `${dialogHead((id ? "Edit " : "Add ") + kind, kind === "account" ? "Channel contacts and notes. Never paste passwords or recovery codes." : "Plan, edit, and schedule clips from long-form content.")}<form id="record-form" data-kind="${kind}" data-id="${id || ""}">${fields}<p class="form-error" role="alert"></p><footer class="dialog-foot">${id ? `<button class="button danger-text" type="button" data-delete="${kind}" data-id="${id}">Delete ${kind}</button>` : "<span></span>"}<div><button class="button" type="button" data-action="close-dialog">Cancel</button><button class="button primary" type="submit">Save ${kind}</button></div></footer></form>`,
     );
   }
   function confirm(title, message, label, fn) {
@@ -562,15 +649,23 @@
       table = kind === "account" ? "accounts" : "clips",
       d = structuredClone(S.data),
       row = kind === "account" ? C.account(values) : C.clip(values, d.accounts);
+    let targetCreatedAt = null;
+    if (kind === "clip" && values.target_date) {
+      const parsed = new Date(values.target_date + "T12:00:00.000Z");
+      if (!isNaN(parsed.getTime())) {
+        targetCreatedAt = parsed.toISOString();
+        row.created_at = targetCreatedAt;
+      }
+    }
     let record;
     if (S.mode === "cloud") record = await S.store.save(table, row, id);
     else
       record = {
         ...row,
         id: id || C.uuid(),
-        created_at: id
+        created_at: targetCreatedAt || (id
           ? d[table].find((r) => r.id === id)?.created_at
-          : new Date().toISOString(),
+          : new Date().toISOString()),
       };
     if (id) {
       const index = d[table].findIndex((r) => r.id === id);
@@ -966,6 +1061,51 @@
       edit("clip", null, b.dataset.stage);
       return;
     }
+    if (b.dataset.boardView) {
+      S.boardView = b.dataset.boardView;
+      $("#results").innerHTML = boardContent();
+      document.querySelectorAll("[data-board-view]").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.boardView === S.boardView);
+      });
+      return;
+    }
+    if (b.dataset.calNav) {
+      if (b.dataset.calNav === "prev") {
+        S.calMonth--;
+        if (S.calMonth < 0) {
+          S.calMonth = 11;
+          S.calYear--;
+        }
+      } else if (b.dataset.calNav === "next") {
+        S.calMonth++;
+        if (S.calMonth > 11) {
+          S.calMonth = 0;
+          S.calYear++;
+        }
+      } else if (b.dataset.calNav === "today") {
+        const now = new Date();
+        S.calYear = now.getFullYear();
+        S.calMonth = now.getMonth();
+      }
+      $("#results").innerHTML = boardContent();
+      return;
+    }
+    if (b.dataset.addClipDate) {
+      edit("clip", null, "ready", b.dataset.addClipDate);
+      return;
+    }
+    if (b.dataset.copyTitle) {
+      navigator.clipboard.writeText(b.dataset.copyTitle).then(() => {
+        notify("Hook/Title copied to clipboard!");
+      }).catch(() => {
+        notify("Failed to copy.", true);
+      });
+      return;
+    }
+    if (b.dataset.quickPost) {
+      await move(b.dataset.quickPost, "posted");
+      return;
+    }
     if (b.dataset.authMode) {
       setAuthMode(b.dataset.authMode, "", "error", true);
       return;
@@ -1068,7 +1208,7 @@
     if (e.target.id === "search") {
       S.query = e.target.value;
       $("#results").innerHTML =
-        S.page === "accounts" ? accountResults() : boardResults();
+        S.page === "accounts" ? accountResults() : boardContent();
     }
   });
   document.addEventListener("change", async (e) => {
@@ -1078,7 +1218,7 @@
     if (t.id.startsWith("filter-")) {
       S[t.id.slice(7)] = t.value;
       $("#results").innerHTML =
-        S.page === "accounts" ? accountResults() : boardResults();
+        S.page === "accounts" ? accountResults() : boardContent();
     }
     if (t.dataset.move) await move(t.dataset.move, t.value);
     if (t.id === "theme") {

@@ -1,7 +1,7 @@
 # ClipVault — Enhanced Edition
 
 <p align="center">
-  <strong>A resilient, local-first creator operations workspace for managing accounts, clip production queues, and recorded performance.</strong>
+  <strong>A resilient, local-first creator operations workspace for managing accounts, clip production queues, editorial schedules, and multi-platform analytics.</strong>
 </p>
 
 <p align="center">
@@ -17,11 +17,14 @@
 
 ## ⚡ Overview
 
-**ClipVault Enhanced Edition** is a clean, zero-framework, dependency-free web application designed for content creators, video editors, and social media managers. It decouples creative workflow management from bloated video editing tools, providing a fast cockpit for channels, clip status pipelines, and manual performance tracking.
+**ClipVault Enhanced Edition** is a clean, zero-framework, dependency-free web application designed for content creators, video editors, and social media managers. It decouples creative workflow management from bloated video editing tools, providing a fast cockpit for channels, clip status pipelines, editorial release scheduling, and multi-platform performance tracking.
 
-- 🚀 **Zero Build Step**: Pure HTML5, modern CSS3 (custom properties), and vanilla ES2022. No `npm run build`, no bundler config, no hydration overhead.
+- 🚀 **Zero Build Step**: Pure HTML5, modern CSS3 (custom properties), and vanilla ES2022. No `npm run build`, no bundler configuration, no hydration delay.
 - 🔒 **Local-First & Private**: Persistent browser storage via `localStorage` with zero account required. Local data stays on your machine.
 - ☁️ **Optional Cloud Sync**: Supabase authentication with Row-Level Security (RLS), user profiles, passwordless magic links, and automated password recovery.
+- 📅 **Editorial Content Calendar**: Dedicated monthly schedule with daily release banners, 1-click caption/hook copying, and source video deep-linking.
+- ⚡ **YouTube Shorts 1-Click Auto-Sync**: Auto-fetch live views from YouTube Shorts or videos into clip records or batch-sync up to 50 clips at once using YouTube Data API v3.
+- 📊 **Multi-Platform Quick-Log Mode**: Rapid spreadsheet interface in Analytics allowing creators to tab through and log metrics across YouTube, TikTok, Instagram Reels, and Facebook in seconds.
 - 🛡️ **Safer by Design**: Social platform passwords and recovery codes are strictly forbidden from being collected or stored. No secrets are ever included in notes or exported backups.
 
 ---
@@ -48,15 +51,39 @@ ClipVault supports deep linking and direct URL routes:
 
 ## ✨ Features
 
-- **Overview Dashboard**: High-level production metrics, in-flight pipeline summary, and upcoming priority items.
-- **Account Hub**: Multi-platform creator profiles (YouTube, Instagram, TikTok, Facebook, Podcasts) with handles, contact info, channel URLs, notes, and priority badges.
-- **Visual Clip Board & Calendar**: Kanban drag-and-drop workflow tracking (`Queued` ➔ `Cutting` ➔ `Ready` ➔ `Posted`) toggleable with a monthly **Editorial Calendar View** featuring 1-click hook copying and daily release alerts.
-- **Multi-Platform Quick-Log Mode**: Rapid spreadsheet interface in Analytics allowing creators to tab through and log Total Views and 24h Views across YouTube, TikTok, Instagram, and Facebook in seconds.
-- **YouTube Shorts 1-Click Auto-Sync**: Auto-fetch live views from YouTube Shorts or videos into clip records or batch-sync up to 50 clips at once using YouTube Data API v3, with persistent local key storage.
-- **Audience & Performance Analytics**: View snapshots and 24h retention tracking, cleanly separated from channel lifetime views to avoid double-counting.
-- **User Profiles & Preferences**: Cloud-synced user preferences including light/dark/system themes, default platform filters, and profile details.
-- **Import / Export**: Validated JSON backup export and safe import with confirmation dialogs and corruption guards.
-- **Accessible & Responsive**: Fully keyboard navigable, native focus-trapping `<dialog>` modals, ARIA live regions, and WCAG-compliant color contrast.
+### 1. 🎛️ Kanban Board & Editorial Calendar
+- **Kanban Workflow**: Drag-and-drop cards across 4 production stages (`Queued` ➔ `Cutting` ➔ `Ready` ➔ `Posted`) with full touch and keyboard accessibility.
+- **Monthly Editorial Calendar**: Switch views instantly with the **`[ 📋 Board ]`** / **`[ 📅 Calendar ]`** toggle.
+- **🚀 "READY TO POST TODAY" Drop Banner**: Detects all clips scheduled for today that are ready to publish.
+  - Manual publishing maintains maximum algorithmic reach on new creator accounts (avoiding third-party posting API throttling).
+  - **`📋 Copy Hook`**: 1-click copy for titles and hooks into clipboard for rapid caption pasting.
+  - **`Open Source`**: 1-click access to the original long-form video.
+  - **`✅ Mark Posted`**: 1-click workflow advancement once published.
+- **Target Date Scheduling**: Set target publishing dates directly inside the clip creation modal with zero database migrations.
+
+### 2. ⚡ YouTube Shorts 1-Click Auto-Sync
+- **Universal URL Parser**: Supports `youtube.com/shorts/...`, `youtu.be/...`, `youtube.com/watch?v=...`, and `embed/...`.
+- **Modal ⚡ Fetch Views**: Paste a YouTube URL into *Source video URL* and click **`⚡ Fetch Views`**. It fetches the exact view count from Google's YouTube Data API v3 in real-time, auto-fills the *Total clip views* field, auto-populates the hook title if empty, and auto-marks the clip as `posted`.
+- **Global Batch Sync**: In Analytics, click **`⚡ Sync YouTube Views`** to batch-query up to 50 YouTube clips simultaneously in a single HTTP request (`?id=id1,id2,...`) to minimize API quota consumption.
+- **Persistent Key Storage**: Your YouTube Data API v3 key is saved client-side in `localStorage["clipvault.ytKey"]`. It is never sent to any intermediary server and can be cleared at any time from Settings.
+
+### 3. 📊 Multi-Platform Quick-Log Mode (Spreadsheet Entry)
+- Switch between **`[ 📊 Overview ]`** and **`[ ⚡ Quick-Log Table ]`** in Analytics.
+- High-velocity spreadsheet table with editable inputs for **Total Views** and **24h Views**.
+- **Keyboard-Optimized**: Press <kbd>Tab</kbd> to move rapidly between cells and log metrics across YouTube Shorts, TikTok, Instagram Reels, and Facebook in seconds.
+- **Single-Clip Sync**: Clips with YouTube links include an inline **`⚡ Sync`** button directly in the table for instantaneous metric updates.
+- **Data Integrity Guard**: Enforces that 24h views cannot exceed total views, preventing corrupt metrics before saving.
+
+### 4. 👥 Channel & Account Management
+- Multi-platform creator profiles (YouTube, Instagram, TikTok, Facebook, Podcasts).
+- Channel metadata: handles, contact emails, phone numbers, channel URLs, notes, and priority badges (`High`, `Medium`, `Low`).
+- Channel statistics (YouTube subscriber, video count, and lifetime channel views) kept separate from clip performance to avoid double-counting.
+
+### 5. 🎨 Customization & Backups
+- **Color Themes**: Toggle between System, Light, and Dark mode.
+- **Creator Profiles**: Custom display name and production bio for cloud workspaces.
+- **JSON Backups**: One-click validated export and safe import with confirmation dialogs and integrity checks.
+- **Local / Cloud Isolation**: Keeps local and cloud workspaces segregated without accidental merges.
 
 ---
 
@@ -80,6 +107,22 @@ Open: `http://localhost:8080`
 
 > [!NOTE]
 > Browser `localStorage` is origin-isolated (`protocol + hostname + port`). Accessing the app through the same origin ensures your local workspace records persist between sessions.
+
+---
+
+## 🔑 Setting Up YouTube Auto-Sync (Optional)
+
+ClipVault connects directly to Google's YouTube Data API v3 from your browser:
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a new project (e.g. `ClipVault Sync`).
+3. Navigate to **APIs & Services** ➔ **Library**, search for **YouTube Data API v3**, and click **Enable**.
+4. Go to **APIs & Services** ➔ **Credentials**, click **Create Credentials** ➔ **API Key**.
+5. *(Recommended)* Click **Edit API Key**, set **API restrictions** to **YouTube Data API v3**, and save.
+6. In ClipVault, open **Settings** ➔ paste your key under **YouTube API & Analytics Sync** ➔ click **Save & Sync Channels**.
+
+> [!TIP]
+> Google provides 10,000 free quota units per day. Fetching video stats costs only 1 unit per request, and batch-fetching up to 50 videos at once still costs only 1 unit!
 
 ---
 
@@ -130,7 +173,7 @@ In your Supabase Dashboard:
 | **Row Level Security (RLS)** | All Supabase tables isolate data strictly by `auth.uid() = user_id`. Cloud adapters enforce non-secret column allowlists and pagination. |
 | **Input Sanitization** | `js/core.js` strictly validates and escapes strings, rejects unsafe protocols (`javascript:`, `data:`), strips embedded credentials, and rejects negative/NaN views. |
 | **Local vs Cloud Isolation** | Local storage (`clipvault.enhanced.v1`) and cloud databases are never automatically merged or overwritten without explicit user action. |
-| **Volatile API Keys** | YouTube API keys entered for channel sync remain strictly in-memory and are never written to `localStorage` or transmitted to any backend. |
+| **Client-Direct API Calls** | YouTube API keys are stored client-side in `localStorage` and sent directly to Google APIs over HTTPS. Keys are never transmitted to any third-party or Supabase backend. |
 
 ---
 
@@ -160,20 +203,20 @@ node tests/browser.test.cjs
 
 ```text
 clipvault/
-├── index.html              # Entry point with semantic markup & accessible dialogs
+├── index.html              # Semantic HTML5 entry point with accessible dialogs
 ├── config.js               # Public browser client configuration
 ├── css/
-│   └── styles.css          # Responsive styling, design tokens, light/dark themes
+│   └── styles.css          # Responsive design tokens, Kanban, Calendar, Quick-Log & dark mode
 ├── js/
 │   ├── core.js             # Pure domain logic, validators, metrics, HTML sanitization
 │   ├── storage.js          # LocalStore and CloudStore (Supabase) data adapters
-│   └── app.js              # UI controller, routing, native dialogs, drag-and-drop
+│   └── app.js              # UI controller, YouTube API sync, Quick-Log table, Calendar
 ├── supabase/
 │   └── schema.sql          # PostgreSQL DDL, RLS policies, indexes, and triggers
 ├── tests/
-│   ├── core.test.cjs       # Node unit test suite
+│   ├── core.test.cjs       # Node unit test suite (16 passing assertions)
 │   └── browser.test.cjs    # Playwright browser integration tests
-├── docs/                   # Migration docs, previews, and architectural reviews
+├── docs/                   # Architecture documentation and guides
 └── SETUP_INSTRUCTIONS.md   # Step-by-step Supabase deployment manual
 ```
 

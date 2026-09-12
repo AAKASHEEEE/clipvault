@@ -37,6 +37,34 @@
     }
     return "https://clipvaultt.netlify.app/" + hash;
   }
+  function extractAuthTokens() {
+    const hash = window.location.hash || "";
+    const search = window.location.search || "";
+    const searchParams = new URLSearchParams(search);
+    let code = searchParams.get("code");
+    let error_description = searchParams.get("error_description") || searchParams.get("error");
+    let type = searchParams.get("type");
+    let token_hash = searchParams.get("token_hash");
+    let access_token = null;
+    let refresh_token = null;
+
+    const combined = (hash + "&" + search).replace(/^#+/, "");
+    const parts = combined.split(/[#&?]/);
+    for (const part of parts) {
+      const idx = part.indexOf("=");
+      if (idx > 0) {
+        const key = decodeURIComponent(part.slice(0, idx)).trim();
+        const val = decodeURIComponent(part.slice(idx + 1)).trim();
+        if (key === "access_token") access_token = val;
+        if (key === "refresh_token") refresh_token = val;
+        if (key === "code" && !code) code = val;
+        if (key === "type" && !type) type = val;
+        if (key === "token_hash" && !token_hash) token_hash = val;
+        if (key === "error_description" && !error_description) error_description = val;
+      }
+    }
+    return { access_token, refresh_token, code, type, token_hash, error_description };
+  }
   function setAuthMode(mode = "signin", message = "", type = "error", updateHash = true) {
     S.view = "auth";
     S.authMode = mode;
@@ -958,7 +986,7 @@
             password: values.password,
             options: {
               data: { full_name: values.name },
-              emailRedirectTo: getRedirectUrl("#login"),
+              emailRedirectTo: getRedirectUrl(),
             },
           });
           if (response.error) throw response.error;
@@ -993,7 +1021,7 @@
           const { error } = await sb.auth.signInWithOtp({
             email,
             options: {
-              emailRedirectTo: getRedirectUrl("#login"),
+              emailRedirectTo: getRedirectUrl(),
             },
           });
           if (error) throw error;
@@ -1007,7 +1035,7 @@
           const email = (values.email || "").trim();
           if (!email) throw Error("Please enter your account email address.");
           const { error } = await sb.auth.resetPasswordForEmail(email, {
-            redirectTo: getRedirectUrl("#reset"),
+            redirectTo: getRedirectUrl(),
           });
           if (error) throw error;
           setAuthMode(
@@ -1021,6 +1049,31 @@
             throw Error("Passwords do not match.");
           if (values.password.length < 12)
             throw Error("Password must be at least 12 characters.");
+
+          let { data: sessionCheck } = await sb.auth.getSession();
+          if (!sessionCheck?.session) {
+            const tokens = extractAuthTokens();
+            if (tokens.access_token && tokens.refresh_token) {
+              const res = await sb.auth.setSession({
+                access_token: tokens.access_token,
+                refresh_token: tokens.refresh_token,
+              });
+              sessionCheck = res.data;
+            } else if (tokens.code) {
+              const res = await sb.auth.exchangeCodeForSession(tokens.code);
+              sessionCheck = res.data;
+            }
+          }
+
+          if (!sessionCheck?.session) {
+            setAuthMode(
+              "forgot",
+              "Your password reset link has expired or was already used. Please enter your email below to receive a new link.",
+              "error",
+              true
+            );
+            return;
+          }
 
           const { data, error } = await sb.auth.updateUser({
             password: values.password,
@@ -1317,14 +1370,19 @@
       handleRoute();
     });
 
+    const tokens = extractAuthTokens();
     const hash = window.location.hash || "";
     const search = window.location.search || "";
-    const isAuthRedirect =
+    const isAuthRedirect = Boolean(
+      tokens.access_token ||
+      tokens.code ||
+      tokens.token_hash ||
+      tokens.error_description ||
+      tokens.type === "recovery" ||
       hash.includes("access_token=") ||
       hash.includes("type=recovery") ||
-      hash.includes("error=") ||
-      search.includes("code=") ||
-      search.includes("error=");
+      search.includes("code=")
+    );
     const isAuthRoute =
       hash.startsWith("#login") ||
       hash.startsWith("#signin") ||
@@ -1337,20 +1395,70 @@
     if (window.CLIPVAULT_CONFIG?.supabaseUrl && (isAuthRedirect || isAuthRoute)) {
       try {
         const sb = await client();
-        if (isAuthRedirect) {
-          const { data, error } = await sb.auth.getSession();
+
+        if (tokens.error_description) {
+          setAuthMode("signin", tokens.error_description.replace(/\+/g, " "), "error", true);
+          return;
+        }
+
+        let session = null;
+
+        // 1. If explicit access_token and refresh_token in URL (handles double-hashes too)
+        if (tokens.access_token && tokens.refresh_token) {
+          const { data, error } = await sb.auth.setSession({
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+          });
           if (error) {
-            setAuthMode("signin", error.message, "error", false);
+            console.warn("setSession error:", error);
+          } else {
+            session = data?.session;
+          }
+        }
+        // 2. If PKCE code in URL
+        else if (tokens.code) {
+          const { data, error } = await sb.auth.exchangeCodeForSession(tokens.code);
+          if (error) {
+            console.warn("exchangeCodeForSession error:", error);
+          } else {
+            session = data?.session;
+          }
+        }
+        // 3. If token_hash and type in URL
+        else if (tokens.token_hash && tokens.type) {
+          const { data, error } = await sb.auth.verifyOtp({
+            token_hash: tokens.token_hash,
+            type: tokens.type,
+          });
+          if (error) {
+            console.warn("verifyOtp error:", error);
+          } else {
+            session = data?.session;
+          }
+        }
+
+        // 4. Check active stored session if not already extracted
+        if (!session) {
+          const { data } = await sb.auth.getSession();
+          session = data?.session;
+        }
+
+        // If this is a password recovery attempt
+        if (tokens.type === "recovery" || hash.includes("reset") || hash.includes("type=recovery")) {
+          if (session) {
+            setAuthMode("reset", "Recovery link verified. Please choose your new password.", "info", false);
+            history.replaceState(null, "", window.location.pathname + "#reset");
+            return;
+          } else if (isAuthRedirect) {
+            setAuthMode("forgot", "This password reset link has expired or was already used. Please request a fresh link below.", "error", true);
             return;
           }
-          if (hash.includes("type=recovery") || search.includes("type=recovery")) {
-            setAuthMode("reset", "Recovery link verified. Please enter your new password below.", "info", false);
-            return;
-          }
-          if (data?.session && S.authMode !== "reset") {
-            await enterCloud(data.session);
-            return;
-          }
+        }
+
+        // If authenticated and not in password recovery mode, load workspace
+        if (session && S.authMode !== "reset") {
+          await enterCloud(session);
+          return;
         }
       } catch (err) {
         console.warn("Auth initialization error:", err);

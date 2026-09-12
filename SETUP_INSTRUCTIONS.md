@@ -32,6 +32,53 @@
   - Applies user preferences to customize the site appearance
   - Stores profile in `S.profile` for use throughout the app
 
+### 4. **Password Reset, Magic Link & Auth URLs Added** (js/app.js & css/styles.css)
+- **Dedicated Auth URLs & Deep Linking:**
+  - Login URL: `https://clipvaultt.netlify.app/#login`
+  - Sign Up URL: `https://clipvaultt.netlify.app/#signup`
+  - Magic Link URL: `https://clipvaultt.netlify.app/#magiclink`
+  - Forgot Password URL: `https://clipvaultt.netlify.app/#forgot`
+  - Reset Password URL: `https://clipvaultt.netlify.app/#reset`
+- **Password Reset Flow:**
+  - Users who forgot their password can request a reset email from `#forgot` or click "Forgot password?" on the login screen.
+  - Supabase email link redirects to `#reset` where the user securely enters and confirms their new password.
+  - Automatically updates the password via `supabase.auth.updateUser` and transitions into the cloud workspace.
+- **Passwordless Magic Link Flow:**
+  - Users can sign in without a password by requesting a Magic Link from `#magiclink`.
+  - Clicking the email link logs them directly into their private cloud workspace.
+- **Auto-Session & Redirect Recovery Detection:**
+  - Automatic detection of Supabase redirect hashes and recovery tokens on page load.
+  - Preserves browser back/forward and direct bookmarking support.
+
+---
+
+## 🔑 Supabase URL Configuration (Required for Emails)
+
+For Supabase to deliver password reset and magic link emails that redirect back to your Netlify site, configure your URLs in the Supabase Dashboard:
+
+1. Go to [https://supabase.com/dashboard](https://supabase.com/dashboard) and open your project (`rtfurmjgqpqjiwjgjjex`).
+2. Navigate to **Authentication** (left sidebar) → **URL Configuration**.
+3. Set **Site URL** to:
+   ```
+   https://clipvaultt.netlify.app
+   ```
+4. Under **Redirect URLs**, add the following:
+   ```
+   https://clipvaultt.netlify.app/**
+   https://clipvaultt.netlify.app/
+   https://clipvaultt.netlify.app/#reset
+   https://clipvaultt.netlify.app/#login
+   http://localhost:3000/**
+   ```
+5. Click **Save**.
+
+### How to trigger Password Reset or Magic Link from Supabase Dashboard directly:
+1. In Supabase Dashboard, go to **Authentication** → **Users**.
+2. Find your registered email in the list.
+3. Click the three dots (`...`) on the right side of the row:
+   - Click **"Send password recovery"** to send a password reset link.
+   - Click **"Send magic link"** to send an instant sign-in link.
+
 ---
 
 ## 🚀 Next Steps (What You Need to Do)

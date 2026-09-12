@@ -1649,16 +1649,74 @@ fieldset > p {
   width: 100%;
   margin-top: 4px;
 }
+.auth-tabs {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 4px;
+  margin: 16px 0 20px;
+}
+.auth-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s, color 0.15s;
+}
+.auth-tab:hover {
+  color: var(--text);
+}
+.auth-tab.active {
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.auth-notice {
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.auth-notice.info {
+  background: #1b55d918;
+  color: #1b55d9;
+  border: 1px solid #1b55d933;
+}
+.auth-notice.success {
+  background: #10b98118;
+  color: #059669;
+  border: 1px solid #10b98133;
+}
+.auth-notice.error {
+  background: #ef444418;
+  color: #dc2626;
+  border: 1px solid #ef444433;
+}
 .auth-links {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  margin: 20px 0;
+  margin: 20px 0 12px;
 }
 .auth-card > small {
   display: block;
-  font-size: 14px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
 }
 :root[data-theme="dark"] .platform-text {
   color: var(--muted);

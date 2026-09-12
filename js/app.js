@@ -10,6 +10,9 @@
   const empty = () => ({ version: 1, accounts: [], clips: [] });
   const S = {
     view: "home",
+    authMode: "signin",
+    authMessage: "",
+    authMessageType: "error",
     page: "overview",
     data: empty(),
     mode: "local",
@@ -25,6 +28,53 @@
     client: null,
     user: null,
   };
+  function getRedirectUrl(hash = "") {
+    if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+      return window.location.origin + window.location.pathname + hash;
+    }
+    return "https://clipvaultt.netlify.app/" + hash;
+  }
+  function setAuthMode(mode = "signin", message = "", type = "error", updateHash = true) {
+    S.view = "auth";
+    S.authMode = mode;
+    S.authMessage = message;
+    S.authMessageType = type;
+    if (updateHash) {
+      const hash = mode === "signin" ? "#login" : "#" + mode;
+      if (window.location.hash !== hash) {
+        history.replaceState(null, "", hash);
+      }
+    }
+    render();
+  }
+  function handleRoute() {
+    const hash = window.location.hash || "";
+    const params = new URLSearchParams(window.location.search);
+    const authParam = params.get("auth") || params.get("mode");
+
+    if (hash.includes("type=recovery") || authParam === "reset" || hash === "#reset" || hash.startsWith("#reset")) {
+      setAuthMode("reset", "Enter your new password below (at least 12 characters).", "info", false);
+      return;
+    }
+
+    const route = authParam || (hash.startsWith("#") ? hash.slice(1).split("?")[0] : "");
+    if (["login", "signin"].includes(route)) {
+      setAuthMode("signin", "", "error", false);
+    } else if (["signup", "register"].includes(route)) {
+      setAuthMode("signup", "", "error", false);
+    } else if (["magiclink", "magic-link", "magic"].includes(route)) {
+      setAuthMode("magiclink", "", "error", false);
+    } else if (["forgot", "forgot-password", "reset-password"].includes(route)) {
+      setAuthMode("forgot", "", "error", false);
+    } else if (["reset", "update-password"].includes(route)) {
+      setAuthMode("reset", "", "error", false);
+    } else if (hash === "" || hash === "#" || hash === "#home" || hash.startsWith("#workflow") || hash.startsWith("#faq")) {
+      if (!S.user && S.view === "auth") {
+        S.view = "home";
+        render();
+      }
+    }
+  }
   let returnFocus = null,
     ytKey = "";
   const names = {
@@ -112,16 +162,6 @@
     document.body.classList.remove("nav-open");
     root.innerHTML =
       S.view === "home" ? home() : S.view === "auth" ? auth() : shell();
-    if (S.view === "home") {
-      const workspaceButton = root.querySelector('[data-action="login"]');
-      if (workspaceButton) {
-        workspaceButton.dataset.action = "local";
-        workspaceButton.textContent = "Open workspace";
-      }
-      const heroNote = root.querySelector(".hero > div:first-child .actions + small");
-      if (heroNote) heroNote.textContent = "Open your workspace instantly. No account required.";
-      root.querySelector("#faq details:first-of-type")?.remove();
-    }
     if (S.view === "app" && S.page === "settings") {
       const cloudHeading = [...root.querySelectorAll("#page-content h2")].find((h) => h.textContent.includes("Optional cloud"));
       if (cloudHeading) {
@@ -133,10 +173,12 @@
     document.title =
       S.view === "app"
         ? names[S.page] + " · ClipVault"
-        : "ClipVault — Make room for better content";
+        : S.view === "auth"
+          ? (S.authMode === "signup" ? "Sign Up" : S.authMode === "forgot" ? "Reset Password" : S.authMode === "reset" ? "New Password" : S.authMode === "magiclink" ? "Magic Link" : "Log In") + " · ClipVault"
+          : "ClipVault — Make room for better content";
   }
   function home() {
-    return `<div class="landing"><nav class="landnav" aria-label="Main">${brand()}<div><a href="#workflow">How it works</a><a href="#faq">FAQs</a>${btn("Log in", "login")}</div></nav><main id="content"><section class="hero"><div><span class="eyebrow">● YOUR CONTENT, WITH A PLAN</span><h1>Less admin.<br>More <em>great clips.</em></h1><p>Your channels, your production queue, your next big idea. A calmer workspace for everything around the edit.</p><div class="actions">${btn("Try the demo " + icon("arrow"), "demo", true)}${btn("Start a blank workspace", "local")}</div><small>No sign-up for local mode. No automatic publishing.</small></div><div class="product-preview"><div class="preview-top"><b>${icon("play")} Studio workspace</b>${badge("SAMPLE DATA", "blue")}</div><div class="preview-body"><span class="eyebrow">MAKE SOMETHING GOOD</span><h2>Your next batch, sorted.</h2><div class="preview-stats"><div><b>8</b><small>Ideas in motion</small></div><div><b>3</b><small>Ready to share</small></div><div><b>1</b><small>Clear workflow</small></div></div><div class="preview-board"><section><h3><i class="dot cutting"></i> Cutting</h3><article><span class="platform-text instagram">INSTAGRAM</span><h4>The conversation worth clipping.</h4><div class="wave" aria-hidden="true">${Array.from({ length: 16 }, () => "<i></i>").join("")}</div><small>Off Script · Editing</small></article><article><span class="platform-text youtube">YOUTUBE</span><h4>A better morning routine</h4></article></section><section><h3><i class="dot ready"></i> Ready</h3><article><span class="ready-check">${icon("check")}</span><h4>The final-round comeback.</h4><p>One last look. Then it’s out in the world.</p><small>Pixel Playground</small></article><div class="preview-empty">Room for your next idea</div></section></div></div><div class="preview-foot">${icon("check")} From first idea to final post.</div></div></section><section class="platform-strip"><span>ONE HOME FOR YOUR CHANNELS</span><b>YouTube</b><b>Instagram</b><b>TikTok</b><b>Facebook</b></section><section class="home-section" id="workflow"><span class="eyebrow">A LITTLE STRUCTURE. A LOT MORE FOCUS.</span><h2>Stay in the creative flow.</h2><p>Not another video editor. The workspace that keeps your workflow moving.</p><div class="features">${[
+    return `<div class="landing"><nav class="landnav" aria-label="Main">${brand()}<div><a href="#workflow">How it works</a><a href="#faq">FAQs</a>${btn("Local workspace", "local")}${btn("Cloud sign in", "login", true)}</div></nav><main id="content"><section class="hero"><div><span class="eyebrow">● YOUR CONTENT, WITH A PLAN</span><h1>Less admin.<br>More <em>great clips.</em></h1><p>Your channels, your production queue, your next big idea. A calmer workspace for everything around the edit.</p><div class="actions">${btn("Try the demo " + icon("arrow"), "demo", true)}${btn("Start a blank workspace", "local")}</div><small>No sign-up for local mode. No automatic publishing.</small></div><div class="product-preview"><div class="preview-top"><b>${icon("play")} Studio workspace</b>${badge("SAMPLE DATA", "blue")}</div><div class="preview-body"><span class="eyebrow">MAKE SOMETHING GOOD</span><h2>Your next batch, sorted.</h2><div class="preview-stats"><div><b>8</b><small>Ideas in motion</small></div><div><b>3</b><small>Ready to share</small></div><div><b>1</b><small>Clear workflow</small></div></div><div class="preview-board"><section><h3><i class="dot cutting"></i> Cutting</h3><article><span class="platform-text instagram">INSTAGRAM</span><h4>The conversation worth clipping.</h4><div class="wave" aria-hidden="true">${Array.from({ length: 16 }, () => "<i></i>").join("")}</div><small>Off Script · Editing</small></article><article><span class="platform-text youtube">YOUTUBE</span><h4>A better morning routine</h4></article></section><section><h3><i class="dot ready"></i> Ready</h3><article><span class="ready-check">${icon("check")}</span><h4>The final-round comeback.</h4><p>One last look. Then it’s out in the world.</p><small>Pixel Playground</small></article><div class="preview-empty">Room for your next idea</div></section></div></div><div class="preview-foot">${icon("check")} From first idea to final post.</div></div></section><section class="platform-strip"><span>ONE HOME FOR YOUR CHANNELS</span><b>YouTube</b><b>Instagram</b><b>TikTok</b><b>Facebook</b></section><section class="home-section" id="workflow"><span class="eyebrow">A LITTLE STRUCTURE. A LOT MORE FOCUS.</span><h2>Stay in the creative flow.</h2><p>Not another video editor. The workspace that keeps your workflow moving.</p><div class="features">${[
       [
         "01 / ORGANIZE",
         "accounts",
@@ -331,8 +373,88 @@
   function settings() {
     return `<div class="settings-grid"><section class="panel settings-panel"><h2>Data & backups</h2><p>${S.sample ? "Demo data is in memory only." : S.mode === "cloud" ? "Cloud data belongs to your authenticated user." : "Local data is stored in this browser and is not encrypted. Clearing site data deletes it."}</p><div class="actions">${btn("Export JSON backup", "export")}${!S.sample && S.mode === "local" ? btn("Import JSON backup", "import") : ""}</div><input type="file" id="backup-file" accept=".json,application/json" hidden><small>Backups include contacts and notes. Store them privately. Import replaces local data only after validation and confirmation.</small>${!S.sample && S.mode === "local" ? `<hr><h3>Reset local workspace</h3><p>Export a backup first. Cloud records and the old version’s storage are not affected.</p><div class="actions">${btn("Reset local data", "reset-local")}${btn("Export raw local data", "raw")}</div>` : ""}</section><section class="panel settings-panel"><h2>Appearance</h2><label class="field">Color theme<select id="theme">${["system", "light", "dark"].map((t) => `<option value="${t}" ${document.documentElement.dataset.theme === t ? "selected" : ""}>${t[0].toUpperCase() + t.slice(1)}</option>`).join("")}</select></label><hr><h2>Optional cloud workspace</h2><p>${S.mode === "cloud" ? "Signed in as " + E(S.user?.email) : "Configure your own Supabase project in config.js. Local and cloud workspaces are never automatically merged."}</p>${btn(S.mode === "cloud" ? "Sign out" : "Cloud sign-in", S.mode === "cloud" ? "exit" : "login")}</section><section class="panel settings-panel"><h2>YouTube channel stats</h2><p>Use an API key restricted to your HTTP referrers and YouTube Data API v3. The key stays in memory only.</p><form id="youtube-form">${field("key", "Restricted YouTube API key", ytKey, "password", 'autocomplete="off"')}<button class="button" type="submit">Sync YouTube channels</button><p class="form-error" role="alert"></p></form><small>Updates channel view totals, not clip analytics. Use an @handle or /channel/ URL. No subscriber/video-count display in this edition.</small></section><section class="panel settings-panel"><h2>Safer by design</h2><ul><li>No social-account passwords or recovery codes.</li><li>Only validated http(s) links.</li><li>Save failures keep your form open.</li><li>Cloud record ownership enforced by database policies.</li></ul><p>This is not a password vault. Old credentials in your original database are not deleted by this edition.</p></section></div>`;
   }
-  function auth(mode = "signin", message = "") {
-    return `<div class="auth-page">${brand()}<main class="auth-card" id="content">${badge("SUPABASE CLOUD WORKSPACE", "blue")}<h1>${mode === "signup" ? "Make it your workspace." : "Welcome back."}</h1><p>Your private ClipVault cloud workspace is ready. Sign in to continue.</p><form id="auth-form" data-mode="${mode}">${mode === "signup" ? field("name", "Your name", "", "text", 'required autocomplete="name"') : ""}${field("email", "Email address", "", "email", 'required autocomplete="email"')}${field("password", "Password", "", "password", `required autocomplete="${mode === "signup" ? "new-password" : "current-password"}" ${mode === "signup" ? 'minlength="12"' : ""}`)}${mode === "signup" ? field("confirm", "Confirm password", "", "password", 'required autocomplete="new-password"') : ""}<button class="button primary" type="submit">${mode === "signup" ? "Create account" : "Sign in"} ${icon("arrow")}</button><p class="form-error" role="alert">${E(message)}</p></form><div class="auth-links"><button class="text-button" data-auth-mode="${mode === "signup" ? "signin" : "signup"}">${mode === "signup" ? "Already have an account?" : "Create a cloud account"}</button><button class="text-button" data-action="home">← Back to home</button></div><small>Password reset is managed through your Supabase deployment; no reset UI is included in this edition.</small></main></div>`;
+  function auth() {
+    const mode = S.authMode || "signin";
+    const titles = {
+      signin: "Welcome back.",
+      signup: "Make it your workspace.",
+      magiclink: "Sign in with Magic Link",
+      forgot: "Reset your password",
+      reset: "Choose a new password",
+    };
+    const subtitles = {
+      signin: "Your private ClipVault cloud workspace is ready. Sign in to continue.",
+      signup: "Sign up to securely sync and access your creator workspace anywhere.",
+      magiclink: "Enter your email address and we'll send a passwordless sign-in link.",
+      forgot: "Enter your account email. We'll send you a secure link to choose a new password.",
+      reset: "Enter your new password below (at least 12 characters).",
+    };
+
+    const isMainTab = ["signin", "magiclink", "signup"].includes(mode);
+    const tabsHtml = isMainTab
+      ? `<div class="auth-tabs" role="tablist">
+          <button type="button" class="auth-tab ${mode === "signin" ? "active" : ""}" data-auth-mode="signin">Password</button>
+          <button type="button" class="auth-tab ${mode === "magiclink" ? "active" : ""}" data-auth-mode="magiclink">Magic Link</button>
+          <button type="button" class="auth-tab ${mode === "signup" ? "active" : ""}" data-auth-mode="signup">Sign Up</button>
+        </div>`
+      : "";
+
+    let formFields = "";
+    let submitLabel = "Sign in";
+
+    if (mode === "signin") {
+      formFields = `${field("email", "Email address", "", "email", 'required autocomplete="email" autofocus')}${field("password", "Password", "", "password", 'required autocomplete="current-password"')}`;
+      submitLabel = "Sign in";
+    } else if (mode === "signup") {
+      formFields = `${field("name", "Your name", "", "text", 'required autocomplete="name" autofocus')}${field("email", "Email address", "", "email", 'required autocomplete="email"')}${field("password", "Password", "", "password", 'required autocomplete="new-password" minlength="12"')}${field("confirm", "Confirm password", "", "password", 'required autocomplete="new-password"')}`;
+      submitLabel = "Create account";
+    } else if (mode === "magiclink") {
+      formFields = `${field("email", "Email address", "", "email", 'required autocomplete="email" autofocus')}`;
+      submitLabel = "Send Magic Link";
+    } else if (mode === "forgot") {
+      formFields = `${field("email", "Account email address", "", "email", 'required autocomplete="email" autofocus')}`;
+      submitLabel = "Send reset link";
+    } else if (mode === "reset") {
+      formFields = `${field("password", "New password", "", "password", 'required autocomplete="new-password" minlength="12" autofocus')}${field("confirm", "Confirm new password", "", "password", 'required autocomplete="new-password"')}`;
+      submitLabel = "Update password & sign in";
+    }
+
+    let linksHtml = "";
+    if (mode === "signin") {
+      linksHtml = `<button type="button" class="text-button" data-auth-mode="forgot">Forgot password?</button><button type="button" class="text-button" data-action="home">← Back to home</button>`;
+    } else if (mode === "magiclink") {
+      linksHtml = `<button type="button" class="text-button" data-auth-mode="signin">Use password instead</button><button type="button" class="text-button" data-action="home">← Back to home</button>`;
+    } else if (mode === "signup") {
+      linksHtml = `<button type="button" class="text-button" data-auth-mode="signin">Already have an account? Sign in</button><button type="button" class="text-button" data-action="home">← Back to home</button>`;
+    } else if (mode === "forgot") {
+      linksHtml = `<button type="button" class="text-button" data-auth-mode="signin">← Back to sign in</button><button type="button" class="text-button" data-action="home">Back to home</button>`;
+    } else if (mode === "reset") {
+      linksHtml = `<button type="button" class="text-button" data-auth-mode="signin">← Back to sign in</button><button type="button" class="text-button" data-action="home">Back to home</button>`;
+    }
+
+    const messageHtml = S.authMessage
+      ? `<div class="auth-notice ${S.authMessageType || "info"}" role="alert">${E(S.authMessage)}</div>`
+      : "";
+
+    return `<div class="auth-page">
+      ${brand()}
+      <main class="auth-card" id="content">
+        ${badge(mode === "reset" || mode === "forgot" ? "PASSWORD RECOVERY" : "SUPABASE CLOUD WORKSPACE", "blue")}
+        <h1>${E(titles[mode] || "Cloud Workspace")}</h1>
+        <p>${E(subtitles[mode] || "")}</p>
+        ${tabsHtml}
+        ${messageHtml}
+        <form id="auth-form" data-mode="${mode}">
+          ${formFields}
+          <button class="button primary" type="submit">${submitLabel} ${icon("arrow")}</button>
+          <p class="form-error" role="alert"></p>
+        </form>
+        <div class="auth-links">
+          ${linksHtml}
+        </div>
+        <small>Protected by Supabase Auth with Row Level Security. Passwords must be at least 12 characters.</small>
+      </main>
+    </div>`;
   }
   async function local(demo = false) {
     if (S.busy) return;
@@ -560,8 +682,14 @@
     S.client.auth.onAuthStateChange((event, session) => {
       setTimeout(() => {
         if (event === "SIGNED_OUT" && S.mode === "cloud") clearSession();
-        if (event === "SIGNED_IN" && S.user && session?.user?.id !== S.user.id)
-          enterCloud(session).catch((e) => notify(e.message, true));
+        if (event === "PASSWORD_RECOVERY") {
+          setAuthMode("reset", "Recovery link verified. Please choose your new password.", "info", true);
+        } else if (event === "SIGNED_IN") {
+          if (S.authMode === "reset") return;
+          if (session?.user && (!S.user || session.user.id !== S.user.id)) {
+            enterCloud(session).catch((e) => notify(e.message, true));
+          }
+        }
       }, 0);
     });
     return S.client;
@@ -594,13 +722,12 @@
         page: "overview",
         loaded: true,
       });
+      if (window.location.hash.startsWith("#login") || window.location.hash.startsWith("#signup") || window.location.hash.startsWith("#magic") || window.location.hash.startsWith("#reset") || window.location.hash.startsWith("#forgot")) {
+        history.replaceState(null, "", window.location.pathname);
+      }
       render();
     } catch (e) {
-      S.view = "auth";
-      root.innerHTML = auth(
-        "signin",
-        "Signed in, but data could not load: " + e.message,
-      );
+      setAuthMode("signin", "Signed in, but data could not load: " + e.message, "error", false);
       throw e;
     }
   }
@@ -629,6 +756,9 @@
       store: new LocalStore(),
     });
     if (dialog.open) closeDialog();
+    if (window.location.hash.startsWith("#login") || window.location.hash.startsWith("#signup") || window.location.hash.startsWith("#magic") || window.location.hash.startsWith("#reset") || window.location.hash.startsWith("#forgot")) {
+      history.replaceState(null, "", window.location.pathname);
+    }
     render();
   }
   async function exit() {
@@ -708,48 +838,112 @@
       }
       if (form.id === "youtube-form") await youtube(values.key);
       if (form.id === "auth-form") {
-        if (
-          form.dataset.mode === "signup" &&
-          values.password !== values.confirm
-        )
-          throw Error("Passwords do not match.");
+        const mode = form.dataset.mode || "signin";
         const sb = await client();
-        const response =
-          form.dataset.mode === "signup"
-            ? await sb.auth.signUp({
-                email: values.email,
-                password: values.password,
-                options: { data: { full_name: values.name } },
-              })
-            : await sb.auth.signInWithPassword({
-                email: values.email,
-                password: values.password,
+
+        if (mode === "signin") {
+          const response = await sb.auth.signInWithPassword({
+            email: values.email,
+            password: values.password,
+          });
+          if (response.error) throw response.error;
+          if (!response.data.session) {
+            setAuthMode("signin", "Check your email to confirm your account, then sign in.", "info", true);
+            return;
+          }
+          await enterCloud(response.data.session);
+        } else if (mode === "signup") {
+          if (values.password !== values.confirm)
+            throw Error("Passwords do not match.");
+          if (values.password.length < 12)
+            throw Error("Password must be at least 12 characters.");
+
+          const response = await sb.auth.signUp({
+            email: values.email,
+            password: values.password,
+            options: {
+              data: { full_name: values.name },
+              emailRedirectTo: getRedirectUrl("#login"),
+            },
+          });
+          if (response.error) throw response.error;
+          if (!response.data.session) {
+            setAuthMode(
+              "signin",
+              "Account created! Check your email to confirm your account, then sign in.",
+              "success",
+              true
+            );
+            return;
+          }
+          if (response.data.session?.user) {
+            try {
+              const store = new CloudStore(S.client, response.data.session.user);
+              await store.saveProfile({
+                display_name: values.name || "",
+                theme: "auto",
+                notifications_enabled: true,
+                default_platform: "youtube",
+                sort_preference: "newest",
+                bio: "",
               });
-        if (response.error) throw response.error;
-        if (!response.data.session) {
-          root.innerHTML = auth(
-            "signin",
-            "Check your email to confirm your account, then sign in.",
+            } catch (e) {
+              console.warn("Could not create user profile:", e);
+            }
+          }
+          await enterCloud(response.data.session);
+        } else if (mode === "magiclink") {
+          const email = (values.email || "").trim();
+          if (!email) throw Error("Please enter your email address.");
+          const { error } = await sb.auth.signInWithOtp({
+            email,
+            options: {
+              emailRedirectTo: getRedirectUrl("#login"),
+            },
+          });
+          if (error) throw error;
+          setAuthMode(
+            "magiclink",
+            "Magic link sent! Check your inbox and click the link to sign in instantly.",
+            "success",
+            true
           );
-          return;
-        }
-        // Create user profile on signup
-        if (form.dataset.mode === "signup" && response.data.session?.user) {
-          try {
-            const store = new CloudStore(S.client, response.data.session.user);
-            await store.saveProfile({
-              display_name: values.name || "",
-              theme: "auto",
-              notifications_enabled: true,
-              default_platform: "youtube",
-              sort_preference: "newest",
-              bio: "",
-            });
-          } catch (e) {
-            console.warn("Could not create user profile:", e);
+        } else if (mode === "forgot") {
+          const email = (values.email || "").trim();
+          if (!email) throw Error("Please enter your account email address.");
+          const { error } = await sb.auth.resetPasswordForEmail(email, {
+            redirectTo: getRedirectUrl("#reset"),
+          });
+          if (error) throw error;
+          setAuthMode(
+            "forgot",
+            "Password reset link sent! Check your inbox and follow the link to choose a new password.",
+            "success",
+            true
+          );
+        } else if (mode === "reset") {
+          if (values.password !== values.confirm)
+            throw Error("Passwords do not match.");
+          if (values.password.length < 12)
+            throw Error("Password must be at least 12 characters.");
+
+          const { data, error } = await sb.auth.updateUser({
+            password: values.password,
+          });
+          if (error) throw error;
+          notify("Password updated successfully!");
+          const { data: sessionData } = await sb.auth.getSession();
+          if (sessionData?.session) {
+            await enterCloud(sessionData.session);
+          } else {
+            setAuthMode(
+              "signin",
+              "Password updated successfully! You can now sign in with your new password.",
+              "success",
+              true
+            );
           }
         }
-        await enterCloud(response.data.session);
       }
     });
   });
@@ -773,7 +967,7 @@
       return;
     }
     if (b.dataset.authMode) {
-      root.innerHTML = auth(b.dataset.authMode);
+      setAuthMode(b.dataset.authMode, "", "error", true);
       return;
     }
     if (b.dataset.delete) {
@@ -798,14 +992,16 @@
           setPage("overview");
         } else {
           S.view = "home";
+          if (window.location.hash.startsWith("#login") || window.location.hash.startsWith("#signup") || window.location.hash.startsWith("#magic") || window.location.hash.startsWith("#forgot") || window.location.hash.startsWith("#reset")) {
+            history.replaceState(null, "", window.location.pathname);
+          }
           render();
         }
       }
       if (action === "login") {
         if (S.user) await enterCloud({ user: S.user });
         else {
-          S.view = "auth";
-          render();
+          setAuthMode("signin", "", "error", true);
         }
       }
       if (action === "exit") await exit();
@@ -963,17 +1159,68 @@
       $("#search").focus();
     }
   });
-  try {
-    const theme = localStorage.getItem("clipvault.theme") || "system";
-    document.documentElement.dataset.theme = [
-      "system",
-      "light",
-      "dark",
-    ].includes(theme)
-      ? theme
-      : "system";
-  } catch {
-    document.documentElement.dataset.theme = "system";
+  async function init() {
+    try {
+      const theme = localStorage.getItem("clipvault.theme") || "system";
+      document.documentElement.dataset.theme = [
+        "system",
+        "light",
+        "dark",
+      ].includes(theme)
+        ? theme
+        : "system";
+    } catch {
+      document.documentElement.dataset.theme = "system";
+    }
+
+    window.addEventListener("hashchange", () => {
+      handleRoute();
+    });
+
+    const hash = window.location.hash || "";
+    const search = window.location.search || "";
+    const isAuthRedirect =
+      hash.includes("access_token=") ||
+      hash.includes("type=recovery") ||
+      hash.includes("error=") ||
+      search.includes("code=") ||
+      search.includes("error=");
+    const isAuthRoute =
+      hash.startsWith("#login") ||
+      hash.startsWith("#signin") ||
+      hash.startsWith("#signup") ||
+      hash.startsWith("#magic") ||
+      hash.startsWith("#forgot") ||
+      hash.startsWith("#reset") ||
+      search.includes("auth=");
+
+    if (window.CLIPVAULT_CONFIG?.supabaseUrl && (isAuthRedirect || isAuthRoute)) {
+      try {
+        const sb = await client();
+        if (isAuthRedirect) {
+          const { data, error } = await sb.auth.getSession();
+          if (error) {
+            setAuthMode("signin", error.message, "error", false);
+            return;
+          }
+          if (hash.includes("type=recovery") || search.includes("type=recovery")) {
+            setAuthMode("reset", "Recovery link verified. Please enter your new password below.", "info", false);
+            return;
+          }
+          if (data?.session && S.authMode !== "reset") {
+            await enterCloud(data.session);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Auth initialization error:", err);
+      }
+    }
+
+    handleRoute();
+    if (S.view !== "auth" && S.view !== "app") {
+      render();
+    }
   }
-  render();
+  init();
 })();

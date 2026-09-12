@@ -15,6 +15,7 @@
     authMessageType: "error",
     page: "overview",
     boardView: "board",
+    analyticsView: "overview",
     calYear: new Date().getFullYear(),
     calMonth: new Date().getMonth(),
     data: empty(),
@@ -107,7 +108,13 @@
     }
   }
   let returnFocus = null,
-    ytKey = "";
+    ytKey = (() => {
+      try {
+        return localStorage.getItem("clipvault.ytKey") || "";
+      } catch {
+        return "";
+      }
+    })();
   const names = {
     overview: "Overview",
     accounts: "Accounts",
@@ -469,10 +476,35 @@
     return `<button type="button" class="cal-clip-item status-${c.status}" data-edit-clip="${c.id}" title="${E(c.title)} (${C.stages[c.status]})"><i class="dot ${c.status}"></i>${a ? platformMark(a.platform) : ""}<span class="cal-clip-name">${E(c.title)}</span></button>`;
   }
   function analytics() {
-    const m = C.metrics(S.data),
-      posted = S.data.clips
-        .filter((c) => c.status === "posted")
-        .sort((a, b) => b.views - a.views);
+    const isQuickLog = S.analyticsView === "quicklog";
+    const m = C.metrics(S.data);
+
+    const toolbarHtml = `
+      <div class="analytics-toolbar">
+        <div class="board-toggle" role="group" aria-label="Analytics layout">
+          <button type="button" class="toggle-btn ${!isQuickLog ? "active" : ""}" data-analytics-view="overview">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            Overview
+          </button>
+          <button type="button" class="toggle-btn ${isQuickLog ? "active" : ""}" data-analytics-view="quicklog">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            Quick-Log Table
+          </button>
+        </div>
+        <div class="analytics-actions">
+          ${ytKey ? `<span class="yt-status-pill" title="YouTube API Key configured">● YouTube Sync Ready</span>` : `<button type="button" class="text-button" data-page="settings">+ Connect YouTube API</button>`}
+          <button type="button" class="button primary tiny" data-action="sync-yt-clips">⚡ Sync YouTube Views</button>
+        </div>
+      </div>
+    `;
+
+    if (isQuickLog) {
+      return toolbarHtml + quickLogView();
+    }
+
+    const posted = S.data.clips
+      .filter((c) => c.status === "posted")
+      .sort((a, b) => b.views - a.views);
     const geo = {},
       age = {};
     posted.forEach((c) => {
@@ -481,10 +513,78 @@
     });
     const top = (o) =>
       Object.entries(o).sort((a, b) => b[1] - a[1])[0]?.[0] || "Not recorded";
-    return `<div class="notice"><p><b>Manual records, not live analytics.</b> Channel totals and posted-clip views stay separate because they may overlap.</p></div><section class="stats">${stat("Posted-clip views", m.clipViews, m.posted + " published clips", true)}${stat("Recorded 24h views", m.recorded24h, "Entered snapshots; reporting dates may differ")}${stat("Channel views", m.channelViews, "Separate lifetime totals")}${stat("In production", m.progress, "Excluded from performance totals")}</section><div class="analytics-grid"><section class="panel"><div class="panel-title"><div><h2>Posted-clip performance</h2><p>Ranked by recorded views.</p></div></div>${posted.length ? `<div class="table-scroll"><table><thead><tr><th>Clip / channel</th><th>Total views</th><th>Recorded 24h</th></tr></thead><tbody>${posted.map((c) => `<tr><td><button class="text-button" data-edit-clip="${c.id}">${E(c.title)}</button><small>${E(S.data.accounts.find((a) => a.id === c.account_id)?.name || "Unlinked")}</small></td><td>${exact(c.views)}</td><td>${exact(c.views_24h)}</td></tr>`).join("")}</tbody></table></div>` : none("Your results start here", "Mark a clip as posted and enter its performance.", "clip", "Add a posted clip")}</section><section class="panel"><div class="panel-title"><div><h2>By platform</h2><p>Posted-clip views only.</p></div></div><div class="breakdown">${[...Object.entries(C.platforms), ["unlinked", "Unlinked"]].map(([k, v]) => `<div><span>${v}</span><b>${compact(posted.filter((c) => (S.data.accounts.find((a) => a.id === c.account_id)?.platform || "unlinked") === k).reduce((s, c) => s + c.views, 0))}</b></div>`).join("")}</div><div class="audience"><h3>Recorded audience labels</h3><p>Top location <b>${E(top(geo))}</b></p><p>Top age group <b>${E(top(age))}</b></p><small>Weighted by each clip’s total views. Not a demographic distribution.</small></div></section></div>`;
+    return `${toolbarHtml}<div class="notice"><p><b>Manual records, not live analytics.</b> Channel totals and posted-clip views stay separate because they may overlap.</p></div><section class="stats">${stat("Posted-clip views", m.clipViews, m.posted + " published clips", true)}${stat("Recorded 24h views", m.recorded24h, "Entered snapshots; reporting dates may differ")}${stat("Channel views", m.channelViews, "Separate lifetime totals")}${stat("In production", m.progress, "Excluded from performance totals")}</section><div class="analytics-grid"><section class="panel"><div class="panel-title"><div><h2>Posted-clip performance</h2><p>Ranked by recorded views.</p></div></div>${posted.length ? `<div class="table-scroll"><table><thead><tr><th>Clip / channel</th><th>Total views</th><th>Recorded 24h</th></tr></thead><tbody>${posted.map((c) => `<tr><td><button class="text-button" data-edit-clip="${c.id}">${E(c.title)}</button><small>${E(S.data.accounts.find((a) => a.id === c.account_id)?.name || "Unlinked")}</small></td><td>${exact(c.views)}</td><td>${exact(c.views_24h)}</td></tr>`).join("")}</tbody></table></div>` : none("Your results start here", "Mark a clip as posted and enter its performance.", "clip", "Add a posted clip")}</section><section class="panel"><div class="panel-title"><div><h2>By platform</h2><p>Posted-clip views only.</p></div></div><div class="breakdown">${[...Object.entries(C.platforms), ["unlinked", "Unlinked"]].map(([k, v]) => `<div><span>${v}</span><b>${compact(posted.filter((c) => (S.data.accounts.find((a) => a.id === c.account_id)?.platform || "unlinked") === k).reduce((s, c) => s + c.views, 0))}</b></div>`).join("")}</div><div class="audience"><h3>Recorded audience labels</h3><p>Top location <b>${E(top(geo))}</b></p><p>Top age group <b>${E(top(age))}</b></p><small>Weighted by each clip’s total views. Not a demographic distribution.</small></div></section></div>`;
+  }
+  function quickLogView() {
+    const clips = S.data.clips;
+    if (!clips.length) {
+      return none("No clips found", "Add clips to your workspace to start recording analytics.", "clip", "Add a clip");
+    }
+
+    return `<div class="quick-log-wrapper">
+      <div class="quick-log-card">
+        <div class="quick-log-head">
+          <div>
+            <h2>Multi-Platform Quick-Log</h2>
+            <p>Rapidly record views across YouTube, TikTok, Instagram, and Facebook. Hit "Save All Changes" when done.</p>
+          </div>
+          <button type="submit" form="quicklog-form" class="button primary">Save All Changes</button>
+        </div>
+        <form id="quicklog-form">
+          <div class="table-scroll">
+            <table class="quick-log-table">
+              <thead>
+                <tr>
+                  <th style="width: 120px;">Platform</th>
+                  <th>Clip Title / Hook</th>
+                  <th>Channel</th>
+                  <th style="width: 100px;">Status</th>
+                  <th style="width: 150px;">Total Views</th>
+                  <th style="width: 150px;">24h Views</th>
+                  <th style="width: 120px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${clips.map((c) => {
+                  const a = S.data.accounts.find((acc) => acc.id === c.account_id);
+                  const isYT = extractYouTubeVideoId(c.source_url) !== null;
+                  return `<tr>
+                    <td><span class="platform-text ${a?.platform || ""}">${a ? platformMark(a.platform) : ""}${E(a ? C.platforms[a.platform] : "Shorts")}</span></td>
+                    <td>
+                      <div class="quick-log-clip-title">
+                        <button type="button" class="text-button" data-edit-clip="${c.id}">${E(c.title)}</button>
+                        ${c.source_url ? `<a href="${E(C.url(c.source_url))}" target="_blank" rel="noopener noreferrer" class="clip-ext-link" title="Open link">${icon("external")}</a>` : ""}
+                      </div>
+                    </td>
+                    <td><small>${E(a?.name || "Unlinked")}</small></td>
+                    <td><span class="badge ${c.status === "posted" ? "green" : c.status === "ready" ? "blue" : ""}">${C.stages[c.status]}</span></td>
+                    <td>
+                      <input type="number" name="views_${c.id}" value="${c.views || 0}" min="0" step="1" class="quick-log-input" aria-label="Total views for ${E(c.title)}">
+                    </td>
+                    <td>
+                      <input type="number" name="views_24h_${c.id}" value="${c.views_24h || 0}" min="0" step="1" class="quick-log-input" aria-label="24h views for ${E(c.title)}">
+                    </td>
+                    <td>
+                      <div class="quick-actions-cell">
+                        ${isYT ? `<button type="button" class="button tiny primary" data-sync-single-yt="${c.id}" title="Fetch latest views from YouTube">⚡ Sync</button>` : ""}
+                        <button type="button" class="button tiny" data-edit-clip="${c.id}">Edit</button>
+                      </div>
+                    </td>
+                  </tr>`;
+                }).join("")}
+              </tbody>
+            </table>
+          </div>
+          <div class="quick-log-foot">
+            <small>Tip: Press Tab to move between view inputs. Status auto-advances to "posted" if views > 0.</small>
+            <button type="submit" class="button primary">Save All Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>`;
   }
   function settings() {
-    return `<div class="settings-grid"><section class="panel settings-panel"><h2>Data & backups</h2><p>${S.sample ? "Demo data is in memory only." : S.mode === "cloud" ? "Cloud data belongs to your authenticated user." : "Local data is stored in this browser and is not encrypted. Clearing site data deletes it."}</p><div class="actions">${btn("Export JSON backup", "export")}${!S.sample && S.mode === "local" ? btn("Import JSON backup", "import") : ""}</div><input type="file" id="backup-file" accept=".json,application/json" hidden><small>Backups include contacts and notes. Store them privately. Import replaces local data only after validation and confirmation.</small>${!S.sample && S.mode === "local" ? `<hr><h3>Reset local workspace</h3><p>Export a backup first. Cloud records and the old version’s storage are not affected.</p><div class="actions">${btn("Reset local data", "reset-local")}${btn("Export raw local data", "raw")}</div>` : ""}</section><section class="panel settings-panel"><h2>Appearance</h2><label class="field">Color theme<select id="theme">${["system", "light", "dark"].map((t) => `<option value="${t}" ${document.documentElement.dataset.theme === t ? "selected" : ""}>${t[0].toUpperCase() + t.slice(1)}</option>`).join("")}</select></label><hr><h2>Optional cloud workspace</h2><p>${S.mode === "cloud" ? "Signed in as " + E(S.user?.email) : "Configure your own Supabase project in config.js. Local and cloud workspaces are never automatically merged."}</p>${btn(S.mode === "cloud" ? "Sign out" : "Cloud sign-in", S.mode === "cloud" ? "exit" : "login")}</section>${S.mode === "cloud" ? `<section class="panel settings-panel"><h2>Creator Profile</h2><p>Your cloud identity across your workspaces.</p><div class="field"><label>Display name<input type="text" id="display_name" value="${E(S.profile?.display_name || "")}" placeholder="Creator or Channel Name"></label></div><div class="field"><label>Bio / Production role<input type="text" id="bio" value="${E(S.profile?.bio || "")}" placeholder="e.g. Lead Editor, Clipper, Creator"></label></div><div class="actions"><button class="button primary" id="save-profile-btn" type="button">Save Profile</button></div></section>` : ""}<section class="panel settings-panel"><h2>YouTube channel stats</h2><p>Use an API key restricted to your HTTP referrers and YouTube Data API v3. The key stays in memory only.</p><form id="youtube-form">${field("key", "Restricted YouTube API key", ytKey, "password", 'autocomplete="off"')}<button class="button" type="submit">Sync YouTube channels</button><p class="form-error" role="alert"></p></form><small>Updates channel view totals, not clip analytics. Use an @handle or /channel/ URL. No subscriber/video-count display in this edition.</small></section><section class="panel settings-panel"><h2>Security & Storage</h2><ul><li>Database access is enforced by strict PostgreSQL Row-Level Security (RLS).</li><li>All network traffic is encrypted via HTTPS with publishable key isolation.</li><li>Local and cloud storage layers remain completely segregated.</li><li>Third-party social credentials are never stored or requested.</li></ul><p>Your workspace is architected for clean, distraction-free creator operations.</p></section></div>`;
+    return `<div class="settings-grid"><section class="panel settings-panel"><h2>Data & backups</h2><p>${S.sample ? "Demo data is in memory only." : S.mode === "cloud" ? "Cloud data belongs to your authenticated user." : "Local data is stored in this browser and is not encrypted. Clearing site data deletes it."}</p><div class="actions">${btn("Export JSON backup", "export")}${!S.sample && S.mode === "local" ? btn("Import JSON backup", "import") : ""}</div><input type="file" id="backup-file" accept=".json,application/json" hidden><small>Backups include contacts and notes. Store them privately. Import replaces local data only after validation and confirmation.</small>${!S.sample && S.mode === "local" ? `<hr><h3>Reset local workspace</h3><p>Export a backup first. Cloud records and the old version’s storage are not affected.</p><div class="actions">${btn("Reset local data", "reset-local")}${btn("Export raw local data", "raw")}</div>` : ""}</section><section class="panel settings-panel"><h2>Appearance</h2><label class="field">Color theme<select id="theme">${["system", "light", "dark"].map((t) => `<option value="${t}" ${document.documentElement.dataset.theme === t ? "selected" : ""}>${t[0].toUpperCase() + t.slice(1)}</option>`).join("")}</select></label><hr><h2>Optional cloud workspace</h2><p>${S.mode === "cloud" ? "Signed in as " + E(S.user?.email) : "Configure your own Supabase project in config.js. Local and cloud workspaces are never automatically merged."}</p>${btn(S.mode === "cloud" ? "Sign out" : "Cloud sign-in", S.mode === "cloud" ? "exit" : "login")}</section>${S.mode === "cloud" ? `<section class="panel settings-panel"><h2>Creator Profile</h2><p>Your cloud identity across your workspaces.</p><div class="field"><label>Display name<input type="text" id="display_name" value="${E(S.profile?.display_name || "")}" placeholder="Creator or Channel Name"></label></div><div class="field"><label>Bio / Production role<input type="text" id="bio" value="${E(S.profile?.bio || "")}" placeholder="e.g. Lead Editor, Clipper, Creator"></label></div><div class="actions"><button class="button primary" id="save-profile-btn" type="button">Save Profile</button></div></section>` : ""}<section class="panel settings-panel"><h2>YouTube API & Analytics Sync</h2><p>Use a free Google Cloud API key with YouTube Data API v3 enabled. Your key is saved locally in your browser for automatic Shorts and channel syncing.</p><form id="youtube-form">${field("key", "Restricted YouTube API key", ytKey, "password", 'autocomplete="off" placeholder="AIzaSy..."')}<div class="actions"><button class="button primary" type="submit">Save & Sync Channels</button>${ytKey ? `<button class="button danger-text" type="button" data-action="clear-yt-key">Clear Key</button>` : ""}</div><p class="form-error" role="alert"></p></form><small>Powers 1-click YouTube Shorts view syncing and channel statistics. Stored privately in this browser.</small></section><section class="panel settings-panel"><h2>Security & Storage</h2><ul><li>Database access is enforced by strict PostgreSQL Row-Level Security (RLS).</li><li>All network traffic is encrypted via HTTPS with publishable key isolation.</li><li>Local and cloud storage layers remain completely segregated.</li><li>Third-party social credentials are never stored or requested.</li></ul><p>Your workspace is architected for clean, distraction-free creator operations.</p></section></div>`;
   }
   function auth() {
     const mode = S.authMode || "signin";
@@ -638,7 +738,7 @@
       fields = `<div class="form-grid">${field("name", "Account name *", r.name, "text", 'required maxlength="100" autofocus')}${select("platform", "Platform", C.platforms, r.platform || "youtube")}<div class="full">${field("url", "Channel URL *", r.url, "text", 'required inputmode="url" placeholder="https://youtube.com/@channel"')}</div>${field("handle", "Handle / username", r.handle, "text", 'maxlength="100"')}${select("niche", "Content niche", Object.fromEntries(C.niches.map((k) => [k, k])), r.niche || "other")}${select("priority", "Priority", { high: "High", medium: "Medium", low: "Low" }, r.priority || "medium")}${select("status", "Account status", { active: "Active", paused: "Paused", review: "Review" }, r.status || "active")}${field("views", "Recorded channel views", r.views || 0, "number", 'min="0" step="1"')}${field("subscribers", "YouTube subscribers", r.subscribers || 0, "number", 'min="0" step="1"')}${field("videos", "Published videos", r.videos || 0, "number", 'min="0" step="1"')}${field("email", "Contact email", r.email, "email")}${field("phone", "Contact phone", r.phone, "tel")}<label class="field full">Content notes<textarea name="notes" rows="3" maxlength="2000">${E(r.notes || "")}</textarea></label></div>`;
     else {
       const defaultDate = targetDate || (r.created_at ? r.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10));
-      fields = `<div class="form-grid"><div class="full">${field("title", "Clip title / hook *", r.title, "text", 'required maxlength="180" autofocus')}</div>${select("account_id", "From channel/account", { "": "Unlinked", ...Object.fromEntries(S.data.accounts.map((a) => [a.id, a.name])) }, r.account_id || "")}${field("target_date", "Target publish date", defaultDate, "date")}${select("priority", "Priority", { high: "High", medium: "Medium", low: "Low" }, r.priority || "medium")}<div class="full">${field("source_url", "Source video URL (for long-form clipping)", r.source_url, "text", 'inputmode="url" placeholder="https://youtube.com/watch?v=..."')}</div><div class="full">${select("status", "Workflow status", C.stages, r.status || stage || "queued")}</div></div><fieldset id="performance-fields" ${(r.status || stage) !== "posted" ? "hidden" : ""}><legend>Recorded performance</legend><p>Manual snapshots, not live data. 24h views cannot exceed total views.</p><div class="form-grid">${field("views", "Total clip views", r.views || 0, "number", 'min="0" step="1"')}${field("views_24h", "Recorded 24h views", r.views_24h || 0, "number", 'min="0" step="1"')}${field("geo", "Top audience location", r.geo)}${select("age_group", "Top age group", { "": "Not recorded", "13–17": "13–17", "18–24": "18–24", "25–34": "25–34", "35–44": "35–44", "45+": "45+" }, r.age_group || "")}</div></fieldset>`;
+      fields = `<div class="form-grid"><div class="full">${field("title", "Clip title / hook *", r.title, "text", 'required maxlength="180" autofocus')}</div>${select("account_id", "From channel/account", { "": "Unlinked", ...Object.fromEntries(S.data.accounts.map((a) => [a.id, a.name])) }, r.account_id || "")}${field("target_date", "Target publish date", defaultDate, "date")}${select("priority", "Priority", { high: "High", medium: "Medium", low: "Low" }, r.priority || "medium")}<div class="full">${field("source_url", "Source video URL (for long-form clipping)", r.source_url, "text", 'inputmode="url" placeholder="https://youtube.com/watch?v=..."')}</div><div class="full">${select("status", "Workflow status", C.stages, r.status || stage || "queued")}</div></div><fieldset id="performance-fields" ${(r.status || stage) !== "posted" ? "hidden" : ""}><legend>Recorded performance</legend><p>Manual snapshots, not live data. 24h views cannot exceed total views.</p><div class="form-grid"><div class="views-fetch-group">${field("views", "Total clip views", r.views || 0, "number", 'min="0" step="1"')}<button type="button" class="button tiny primary fetch-views-btn" data-action="fetch-clip-views" title="Auto-fetch views if YouTube URL is provided">⚡ Fetch Views</button></div>${field("views_24h", "Recorded 24h views", r.views_24h || 0, "number", 'min="0" step="1"')}${field("geo", "Top audience location", r.geo)}${select("age_group", "Top age group", { "": "Not recorded", "13–17": "13–17", "18–24": "18–24", "25–34": "25–34", "35–44": "35–44", "45+": "45+" }, r.age_group || "")}</div></fieldset>`;
     }
     openDialog(
       `${dialogHead((id ? "Edit " : "Add ") + kind, kind === "account" ? "Channel contacts and notes. Never paste passwords or recovery codes." : "Plan, edit, and schedule clips from long-form content.")}<form id="record-form" data-kind="${kind}" data-id="${id || ""}">${fields}<p class="form-error" role="alert"></p><footer class="dialog-foot">${id ? `<button class="button danger-text" type="button" data-delete="${kind}" data-id="${id}">Delete ${kind}</button>` : "<span></span>"}<div><button class="button" type="button" data-action="close-dialog">Cancel</button><button class="button primary" type="submit">Save ${kind}</button></div></footer></form>`,
@@ -868,7 +968,11 @@
   }
   function clearSession() {
     ++S.epoch;
-    ytKey = "";
+    try {
+      ytKey = localStorage.getItem("clipvault.ytKey") || "";
+    } catch {
+      ytKey = "";
+    }
     Object.assign(S, {
       view: "home",
       user: null,
@@ -899,11 +1003,131 @@
       S.busy = false;
     }
   }
+  function extractYouTubeVideoId(url) {
+    if (!url) return null;
+    const m = String(url).match(/(?:youtu\.be\/|youtube\.com\/(?:shorts\/|watch\?v=|embed\/|v\/))([a-zA-Z0-9_-]{11})/);
+    return m ? m[1] : null;
+  }
+  async function fetchYouTubeClip(url, apiKey) {
+    const key = (apiKey || ytKey || "").trim();
+    if (!key) throw Error("Enter a YouTube API key in Settings first.");
+    const videoId = extractYouTubeVideoId(url);
+    if (!videoId) throw Error("Enter a valid YouTube Shorts or video URL (e.g. youtube.com/shorts/... or youtu.be/...).");
+    
+    const params = new URLSearchParams({
+      part: "statistics,snippet",
+      id: videoId,
+      key: key,
+    });
+    const res = await fetch("https://www.googleapis.com/youtube/v3/videos?" + params, {
+      signal: AbortSignal.timeout(12000),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw Error(data.error?.message || "YouTube API error");
+    if (!data.items?.length) throw Error("Video not found. Check if the video is public or unlisted.");
+    const item = data.items[0];
+    return {
+      id: videoId,
+      title: item.snippet?.title || "",
+      views: Number(item.statistics?.viewCount || 0),
+      likes: Number(item.statistics?.likeCount || 0),
+      comments: Number(item.statistics?.commentCount || 0),
+    };
+  }
+  async function syncYouTubeClips() {
+    const key = (ytKey || "").trim();
+    if (!key) throw Error("Configure a YouTube API key in Settings before syncing.");
+    if (!S.loaded) throw Error("Load a workspace first.");
+
+    const targets = [];
+    for (const c of S.data.clips) {
+      const vid = extractYouTubeVideoId(c.source_url);
+      if (vid) {
+        targets.push({ clip: c, videoId: vid });
+      }
+    }
+
+    if (!targets.length) {
+      throw Error("No clips with YouTube URLs found. Make sure your clips have YouTube Shorts or video links in their source URL.");
+    }
+
+    let updatedCount = 0;
+    const chunkSize = 50;
+    for (let i = 0; i < targets.length; i += chunkSize) {
+      const chunk = targets.slice(i, i + chunkSize);
+      const ids = chunk.map((t) => t.videoId).join(",");
+      const params = new URLSearchParams({
+        part: "statistics",
+        id: ids,
+        key: key,
+      });
+      const res = await fetch("https://www.googleapis.com/youtube/v3/videos?" + params, {
+        signal: AbortSignal.timeout(15000),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw Error(data.error?.message || "YouTube API error");
+
+      const statsMap = new Map();
+      for (const item of (data.items || [])) {
+        statsMap.set(item.id, Number(item.statistics?.viewCount || 0));
+      }
+
+      for (const t of chunk) {
+        if (statsMap.has(t.videoId)) {
+          const freshViews = statsMap.get(t.videoId);
+          if (freshViews !== t.clip.views) {
+            const status = (t.clip.status !== "posted" && freshViews > 0) ? "posted" : t.clip.status;
+            const views_24h = Math.min(t.clip.views_24h || 0, freshViews);
+            await save("clip", { ...t.clip, views: freshViews, status, views_24h }, t.clip.id);
+            updatedCount++;
+          }
+        }
+      }
+    }
+    refresh();
+    notify(`Synced ${targets.length} YouTube clip(s) (${updatedCount} updated).`);
+  }
+  async function saveQuickLog(form) {
+    if (S.busy) return;
+    const formData = new FormData(form);
+    const updates = [];
+    for (const c of S.data.clips) {
+      const viewsVal = formData.get(`views_${c.id}`);
+      const views24hVal = formData.get(`views_24h_${c.id}`);
+      if (viewsVal !== null && views24hVal !== null) {
+        const views = Number(viewsVal) || 0;
+        const views_24h = Number(views24hVal) || 0;
+        if (views !== c.views || views_24h !== c.views_24h) {
+          if (views_24h > views) {
+            throw Error(`Clip "${c.title}": 24-hour views cannot exceed total views.`);
+          }
+          const status = (c.status !== "posted" && views > 0) ? "posted" : c.status;
+          updates.push({ ...c, views, views_24h, status });
+        }
+      }
+    }
+    if (!updates.length) {
+      notify("No changes detected.");
+      return;
+    }
+    for (const u of updates) {
+      await save("clip", u, u.id);
+    }
+    refresh();
+    notify(`Saved metrics for ${updates.length} clip(s)!`);
+  }
   async function youtube(apiKey) {
     ytKey = apiKey.trim();
     if (!ytKey) throw Error("Paste a restricted YouTube API key.");
+    try {
+      localStorage.setItem("clipvault.ytKey", ytKey);
+    } catch {}
     const list = S.data.accounts.filter((a) => a.platform === "youtube");
-    if (!list.length) throw Error("Add a YouTube account first.");
+    if (!list.length) {
+      refresh();
+      notify("YouTube API key saved! Add a YouTube channel to sync channel stats.");
+      return;
+    }
     let count = 0,
       failures = [];
     for (const a of list) {
@@ -949,10 +1173,13 @@
   }
   document.addEventListener("submit", async (e) => {
     const form = e.target;
-    if (!["record-form", "auth-form", "youtube-form"].includes(form.id)) return;
+    if (!["record-form", "auth-form", "youtube-form", "quicklog-form"].includes(form.id)) return;
     e.preventDefault();
     const values = Object.fromEntries(new FormData(form));
     await busy(form, async () => {
+      if (form.id === "quicklog-form") {
+        await saveQuickLog(form);
+      }
       if (form.id === "record-form") {
         await save(form.dataset.kind, values, form.dataset.id || null);
         closeDialog();
@@ -1175,8 +1402,68 @@
       );
       return;
     }
+    if (b.dataset.analyticsView) {
+      S.analyticsView = b.dataset.analyticsView;
+      refresh();
+      return;
+    }
+    if (b.dataset.syncSingleYt) {
+      const clipId = b.dataset.syncSingleYt;
+      const c = S.data.clips.find((item) => item.id === clipId);
+      if (!c) return;
+      await busy(b, async () => {
+        const info = await fetchYouTubeClip(c.source_url);
+        const freshViews = info.views;
+        const status = (c.status !== "posted" && freshViews > 0) ? "posted" : c.status;
+        const views_24h = Math.min(c.views_24h || 0, freshViews);
+        await save("clip", { ...c, views: freshViews, status, views_24h }, c.id);
+        refresh();
+        notify(`Updated "${c.title}" to ${compact(freshViews)} views!`);
+      });
+      return;
+    }
     const action = b.dataset.action;
     try {
+      if (action === "sync-yt-clips") {
+        await busy(b, async () => {
+          await syncYouTubeClips();
+        });
+      }
+      if (action === "fetch-clip-views") {
+        const dialogForm = b.closest("form");
+        if (!dialogForm) return;
+        const urlInput = dialogForm.querySelector('input[name="source_url"]');
+        const viewsInput = dialogForm.querySelector('input[name="views"]');
+        const titleInput = dialogForm.querySelector('input[name="title"]');
+        const statusSelect = dialogForm.querySelector('select[name="status"]');
+        const perfFields = $("#performance-fields");
+
+        const url = urlInput?.value?.trim();
+        if (!url) {
+          notify("Enter a YouTube Shorts or video URL in 'Source video URL' first.", true);
+          return;
+        }
+        await busy(b, async () => {
+          const info = await fetchYouTubeClip(url);
+          if (viewsInput) viewsInput.value = info.views;
+          if (titleInput && !titleInput.value.trim() && info.title) {
+            titleInput.value = info.title;
+          }
+          if (statusSelect && statusSelect.value !== "posted" && info.views > 0) {
+            statusSelect.value = "posted";
+            if (perfFields) perfFields.hidden = false;
+          }
+          notify(`Fetched ${compact(info.views)} views from YouTube!`);
+        });
+      }
+      if (action === "clear-yt-key") {
+        ytKey = "";
+        try {
+          localStorage.removeItem("clipvault.ytKey");
+        } catch {}
+        refresh();
+        notify("YouTube API key cleared.");
+      }
       if (action === "demo") await local(true);
       if (action === "local") await local();
       if (action === "home") {

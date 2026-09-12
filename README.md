@@ -50,11 +50,12 @@ ClipVault supports deep linking and direct URL routes:
 
 - **Overview Dashboard**: High-level production metrics, in-flight pipeline summary, and upcoming priority items.
 - **Account Hub**: Multi-platform creator profiles (YouTube, Instagram, TikTok, Facebook, Podcasts) with handles, contact info, channel URLs, notes, and priority badges.
-- **Visual Clip Board**: Kanban-style drag-and-drop workflow tracking (`Queued` ➔ `Cutting` ➔ `Ready` ➔ `Posted`) with full touch and keyboard accessibility.
-- **Audience & Performance Analytics**: Manual view snapshots and 24h retention tracking, cleanly separated from channel lifetime views to avoid double-counting.
+- **Visual Clip Board & Calendar**: Kanban drag-and-drop workflow tracking (`Queued` ➔ `Cutting` ➔ `Ready` ➔ `Posted`) toggleable with a monthly **Editorial Calendar View** featuring 1-click hook copying and daily release alerts.
+- **Multi-Platform Quick-Log Mode**: Rapid spreadsheet interface in Analytics allowing creators to tab through and log Total Views and 24h Views across YouTube, TikTok, Instagram, and Facebook in seconds.
+- **YouTube Shorts 1-Click Auto-Sync**: Auto-fetch live views from YouTube Shorts or videos into clip records or batch-sync up to 50 clips at once using YouTube Data API v3, with persistent local key storage.
+- **Audience & Performance Analytics**: View snapshots and 24h retention tracking, cleanly separated from channel lifetime views to avoid double-counting.
 - **User Profiles & Preferences**: Cloud-synced user preferences including light/dark/system themes, default platform filters, and profile details.
 - **Import / Export**: Validated JSON backup export and safe import with confirmation dialogs and corruption guards.
-- **Optional YouTube Sync**: In-memory channel view, subscriber, and video count sync via restricted YouTube Data API v3 keys.
 - **Accessible & Responsive**: Fully keyboard navigable, native focus-trapping `<dialog>` modals, ARIA live regions, and WCAG-compliant color contrast.
 
 ---
